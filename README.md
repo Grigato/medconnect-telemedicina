@@ -1,6 +1,6 @@
 # MedConnect
 
-Protótipo acadêmico de uma plataforma web para agendamento e organização de teleatendimentos em clínicas online.
+Protótipo acadêmico de uma plataforma web para agendamento e organização de teleatendimentos em clínicas online. (TCC)
 
 ## Tecnologias
 
@@ -12,7 +12,7 @@ Protótipo acadêmico de uma plataforma web para agendamento e organização de 
 
 ## Requisitos
 
-- Node.js LTS (o npm já vem incluído)
+- Node.js LTS
 - Git, apenas para baixar e sincronizar o projeto pelo GitHub
 
 ## Abrir em outro computador
