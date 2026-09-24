@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'framer-motion'
+import { supabase } from './lib/supabaseClient'
 import {
   ArrowRight,
   Baby,
@@ -63,11 +64,11 @@ const doctors = [
 ]
 
 const defaultProfile = {
-  name: 'Joana da Silva',
-  email: 'joana.silva@email.com',
-  phone: '(11) 99876-5412',
-  birthDate: '1992-08-14',
-  city: 'São Paulo, SP',
+  name: 'Conta de teste',
+  email: '',
+  phone: '',
+  birthDate: '',
+  city: '',
 }
 
 const defaultMessages = [
@@ -318,16 +319,155 @@ function HomePage({ goTo }) {
 
 function SchedulePage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState('Clínica geral')
-  const [selectedDoctorId, setSelectedDoctorId] = useState('helena-freire')
-  const [selectedTime, setSelectedTime] = useState('14:30')
-  const [confirmed, setConfirmed] = useState(false)
-  const availableTimes = ['10:00', '11:30', '14:30', '16:00', '18:15']
-  const availableDoctors = doctors.filter((doctor) => doctor.specialty === selectedSpecialty)
+  const [selectedDoctorId, setSelectedDoctorId] = useState(null)
+  const [selectedSlotId, setSelectedSlotId] = useState(null)
+  const [confirmedAppointment, setConfirmedAppointment] = useState(null)
+  const [professionals, setProfessionals] = useState([])
+  const [slots, setSlots] = useState([])
+  const [catalogStatus, setCatalogStatus] = useState('loading')
+  const [catalogError, setCatalogError] = useState('')
+  const [availabilityStatus, setAvailabilityStatus] = useState('loading')
+  const [availabilityError, setAvailabilityError] = useState('')
+  const [bookingStatus, setBookingStatus] = useState('idle')
+  const [bookingError, setBookingError] = useState('')
+  const availableDoctors = professionals.filter((professional) => professional.specialty === selectedSpecialty)
   const selectedDoctor = availableDoctors.find((doctor) => doctor.id === selectedDoctorId) ?? availableDoctors[0]
+  const availableSlots = slots.filter((slot) => slot.professional_id === selectedDoctor?.id)
+  const selectedSlot = availableSlots.find((slot) => slot.id === selectedSlotId) ?? availableSlots[0]
+
+  const formatDate = (value) => new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(value))
+
+  const formatTime = (value) => new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(value))
+
+  async function loadAvailability() {
+    setAvailabilityStatus('loading')
+    setAvailabilityError('')
+
+    const { data, error } = await supabase
+      .from('availability_slots')
+      .select('id, professional_id, starts_at, ends_at, status')
+      .eq('status', 'available')
+      .order('starts_at')
+
+    if (error) {
+      setAvailabilityError(error.message)
+      setAvailabilityStatus('error')
+      return
+    }
+
+    setSlots(data ?? [])
+    setAvailabilityStatus(data?.length ? 'ready' : 'empty')
+  }
 
   useEffect(() => {
-    setSelectedDoctorId(availableDoctors[0].id)
-  }, [selectedSpecialty])
+    let cancelled = false
+
+    async function loadProfessionals() {
+      const { data, error } = await supabase
+        .from('professionals')
+        .select('id, name, specialty, description')
+        .order('name')
+
+      if (cancelled) return
+
+      if (error) {
+        setCatalogError(error.message)
+        setCatalogStatus('error')
+        return
+      }
+
+      setProfessionals(data ?? [])
+      setCatalogStatus(data?.length ? 'ready' : 'empty')
+    }
+
+    loadProfessionals()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadSlots() {
+      const { data, error } = await supabase
+        .from('availability_slots')
+        .select('id, professional_id, starts_at, ends_at, status')
+        .eq('status', 'available')
+        .order('starts_at')
+
+      if (cancelled) return
+
+      if (error) {
+        setAvailabilityError(error.message)
+        setAvailabilityStatus('error')
+        return
+      }
+
+      setSlots(data ?? [])
+      setAvailabilityStatus(data?.length ? 'ready' : 'empty')
+    }
+
+    loadSlots()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    setSelectedDoctorId(availableDoctors[0]?.id ?? null)
+    setSelectedSlotId(null)
+    setConfirmedAppointment(null)
+    setBookingError('')
+  }, [selectedSpecialty, professionals])
+
+  useEffect(() => {
+    const doctorSlots = slots.filter((slot) => slot.professional_id === selectedDoctorId)
+    setSelectedSlotId((currentSlotId) => (
+      doctorSlots.some((slot) => slot.id === currentSlotId)
+        ? currentSlotId
+        : doctorSlots[0]?.id ?? null
+    ))
+  }, [selectedDoctorId, slots])
+
+  async function confirmAppointment() {
+    if (!selectedDoctor || !selectedSlot || bookingStatus === 'submitting') return
+
+    setBookingStatus('submitting')
+    setBookingError('')
+
+    const { data: appointmentId, error } = await supabase.rpc('book_appointment', {
+      p_slot_id: selectedSlot.id,
+    })
+
+    if (error) {
+      setBookingStatus('error')
+      setBookingError(error.message)
+      await loadAvailability()
+      return
+    }
+
+    setConfirmedAppointment({
+      id: appointmentId,
+      doctorName: selectedDoctor.name,
+      specialty: selectedDoctor.specialty,
+      startsAt: selectedSlot.starts_at,
+      endsAt: selectedSlot.ends_at,
+    })
+    setSlots((currentSlots) => currentSlots.filter((slot) => slot.id !== selectedSlot.id))
+    setSelectedSlotId(null)
+    setBookingStatus('success')
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
@@ -361,7 +501,7 @@ function SchedulePage() {
               {specialties.map(({ name, icon: Icon, accent }) => {
                 const selected = name === selectedSpecialty
                 return (
-                  <motion.button key={name} type="button" whileTap={{ scale: 0.98 }} onClick={() => { setSelectedSpecialty(name); setConfirmed(false) }} className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal ${selected ? 'border-teal bg-[#effaf8] shadow-sm' : 'border-line bg-white hover:border-[#bcd6d1]'}`}>
+                  <motion.button key={name} type="button" whileTap={{ scale: 0.98 }} onClick={() => { setSelectedSpecialty(name); setConfirmedAppointment(null); setBookingError('') }} className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal ${selected ? 'border-teal bg-[#effaf8] shadow-sm' : 'border-line bg-white hover:border-[#bcd6d1]'}`}>
                     <span className={`grid h-9 w-9 place-items-center rounded-xl ${accent}`}><Icon className="h-[18px] w-[18px]" aria-hidden="true" /></span>
                     <span className="text-sm font-semibold text-ink">{name}</span>
                     {selected && <Check className="ml-auto h-4 w-4 text-teal" aria-label="Selecionado" />}
@@ -372,46 +512,67 @@ function SchedulePage() {
           </Surface>
 
           <Surface hover={false}>
-            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-xl bg-mint text-sm font-bold text-teal">2</span><div><h2 className="text-lg font-bold text-ink">Escolha um perfil</h2><p className="mt-0.5 text-sm text-[#66808a]">Perfis demonstrativos em {selectedSpecialty}.</p></div></div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {availableDoctors.map((doctor) => {
-                const selected = doctor.id === selectedDoctor.id
-                return (
-                  <motion.button key={doctor.id} type="button" whileTap={{ scale: 0.98 }} onClick={() => { setSelectedDoctorId(doctor.id); setConfirmed(false) }} className={`relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal ${selected ? 'border-teal bg-[#effaf8] shadow-sm' : 'border-line bg-fog hover:border-[#bcd6d1]'}`}>
-                    <motion.img whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} src={doctor.image} alt={doctor.name} className="h-12 w-12 rounded-xl object-cover" />
-                    <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-1.5"><span className="truncate text-sm font-bold text-ink">{doctor.name}</span><span className="inline-flex items-center gap-1 text-[0.68rem] font-bold text-[#bd8a11]"><Star className="h-3 w-3 fill-current" />{doctor.rating}</span></span><span className="mt-1 block text-xs text-[#66808a]">{doctor.experience}</span><span className="mt-2 block text-xs font-semibold text-teal">{doctor.availability}</span></span>
-                    {selected && <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal text-white"><Check className="h-3 w-3" aria-label="Selecionado" /></span>}
-                  </motion.button>
-                )
-              })}
-            </div>
-            <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-fog p-4 min-[480px]:flex-row min-[480px]:items-center">
-              <motion.img whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} src={selectedDoctor.image} alt={selectedDoctor.name} className="h-14 w-14 rounded-2xl object-cover" />
-              <div className="flex-1"><p className="font-bold text-ink">{selectedDoctor.name}</p><p className="mt-1 text-sm text-[#66808a]">{selectedDoctor.specialty} · {selectedDoctor.crm}</p></div>
-              <span className="w-fit rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#58717a]">Atendimento online</span>
-            </div>
+            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-xl bg-mint text-sm font-bold text-teal">2</span><div><h2 className="text-lg font-bold text-ink">Escolha um perfil</h2><p className="mt-0.5 text-sm text-[#66808a]">Profissionais fictícios consultados no catálogo para {selectedSpecialty}.</p></div></div>
+            {catalogStatus === 'loading' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando catálogo de profissionais...</p>}
+            {catalogStatus === 'error' && <p className="mt-6 rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert">Não foi possível carregar o catálogo. Confira a conexão e as regras de leitura do Supabase. Detalhe: {catalogError}</p>}
+            {catalogStatus === 'empty' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">O catálogo ainda não possui profissionais fictícios.</p>}
+            {catalogStatus === 'ready' && availableDoctors.length === 0 && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Ainda não há profissionais cadastrados para esta especialidade no catálogo demonstrativo.</p>}
+            {catalogStatus === 'ready' && availableDoctors.length > 0 && (
+              <>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {availableDoctors.map((doctor) => {
+                    const selected = doctor.id === selectedDoctor?.id
+                    return (
+                      <motion.button key={doctor.id} type="button" whileTap={{ scale: 0.98 }} onClick={() => { setSelectedDoctorId(doctor.id); setConfirmedAppointment(null); setBookingError('') }} className={`relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal ${selected ? 'border-teal bg-[#effaf8] shadow-sm' : 'border-line bg-fog hover:border-[#bcd6d1]'}`}>
+                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-mint text-teal"><Stethoscope className="h-5 w-5" aria-hidden="true" /></span>
+                        <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-ink">{doctor.name}</span><span className="mt-1 block text-xs text-[#66808a]">{doctor.description}</span></span>
+                        {selected && <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-teal text-white"><Check className="h-3 w-3" aria-label="Selecionado" /></span>}
+                      </motion.button>
+                    )
+                  })}
+                </div>
+                {selectedDoctor && <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-fog p-4 min-[480px]:flex-row min-[480px]:items-center">
+                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-mint text-teal"><Stethoscope className="h-6 w-6" aria-hidden="true" /></span>
+                  <div className="flex-1"><p className="font-bold text-ink">{selectedDoctor.name}</p><p className="mt-1 text-sm text-[#66808a]">{selectedDoctor.specialty} · {selectedDoctor.description}</p></div>
+                  <span className="w-fit rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#58717a]">Atendimento online</span>
+                </div>}
+              </>
+            )}
           </Surface>
 
           <Surface hover={false}>
-            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-xl bg-mint text-sm font-bold text-teal">3</span><h2 className="text-lg font-bold text-ink">Selecione um horário</h2></div>
-            <div className="mt-6 grid grid-cols-2 gap-3 min-[390px]:grid-cols-3 sm:flex sm:flex-wrap">
-              {availableTimes.map((time) => (
-                <motion.button key={time} type="button" whileTap={{ scale: 0.96 }} onClick={() => setSelectedTime(time)} className={`min-w-0 rounded-xl border px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:min-w-[84px] ${selectedTime === time ? 'border-teal bg-teal text-white' : 'border-line text-[#56707a] hover:border-teal hover:text-ocean'}`}>{time}</motion.button>
-              ))}
-            </div>
+            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-xl bg-mint text-sm font-bold text-teal">3</span><div><h2 className="text-lg font-bold text-ink">Selecione um horário</h2><p className="mt-0.5 text-sm text-[#66808a]">Horários fictícios consultados no banco, no fuso de São Paulo.</p></div></div>
+            {availabilityStatus === 'loading' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando horários disponíveis...</p>}
+            {availabilityStatus === 'error' && <div className="mt-6 rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert"><p>Não foi possível carregar os horários. Confira a conexão e as regras de leitura do Supabase.</p><p className="mt-1 text-xs">Detalhe: {availabilityError}</p><Button variant="ghost" className="mt-3" onClick={loadAvailability}>Tentar novamente</Button></div>}
+            {availabilityStatus === 'empty' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Não há horários fictícios disponíveis neste momento.</p>}
+            {availabilityStatus === 'ready' && !selectedDoctor && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Escolha um profissional disponível para consultar os horários.</p>}
+            {availabilityStatus === 'ready' && selectedDoctor && availableSlots.length === 0 && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Não há mais horários disponíveis para este perfil demonstrativo.</p>}
+            {availabilityStatus === 'ready' && selectedDoctor && availableSlots.length > 0 && <div className="mt-6 grid gap-3 min-[470px]:grid-cols-2 xl:grid-cols-3">
+              {availableSlots.map((slot) => {
+                const selected = slot.id === selectedSlot?.id
+                return (
+                  <motion.button key={slot.id} type="button" whileTap={{ scale: 0.96 }} onClick={() => { setSelectedSlotId(slot.id); setConfirmedAppointment(null); setBookingError('') }} className={`rounded-2xl border p-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal ${selected ? 'border-teal bg-teal text-white' : 'border-line bg-white text-[#56707a] hover:border-teal hover:text-ocean'}`}>
+                    <span className={`block text-xs font-semibold uppercase tracking-[0.1em] ${selected ? 'text-white/75' : 'text-[#66808a]'}`}>{formatDate(slot.starts_at)}</span>
+                    <span className="mt-1 block text-lg font-bold">{formatTime(slot.starts_at)}</span>
+                    <span className={`mt-1 block text-xs ${selected ? 'text-white/75' : 'text-[#66808a]'}`}>até {formatTime(slot.ends_at)}</span>
+                  </motion.button>
+                )
+              })}
+            </div>}
+            {bookingStatus === 'error' && <p className="mt-5 rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert">Não foi possível concluir a reserva. {bookingError}</p>}
             <div className="mt-7 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <p className="min-w-0 text-sm text-[#5d777f]"><strong className="font-semibold text-ink">Hoje, {selectedTime}</strong> · Com {selectedDoctor.name}</p>
-              <Button icon={Calendar} className="w-full sm:w-auto" onClick={() => setConfirmed(true)}>Confirmar consulta</Button>
+              <p className="min-w-0 text-sm text-[#5d777f]"><strong className="font-semibold text-ink">{selectedSlot ? `${formatDate(selectedSlot.starts_at)}, ${formatTime(selectedSlot.starts_at)}` : 'Escolha um horário'}</strong> · {selectedDoctor ? `Com ${selectedDoctor.name}` : 'Escolha um profissional disponível para continuar.'}</p>
+              <Button icon={Calendar} className="w-full sm:w-auto" disabled={!selectedDoctor || !selectedSlot || bookingStatus === 'submitting'} onClick={confirmAppointment}>{bookingStatus === 'submitting' ? 'Reservando...' : 'Confirmar consulta'}</Button>
             </div>
           </Surface>
         </div>
       </div>
       <AnimatePresence>
-        {confirmed && (
+        {confirmedAppointment && (
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} role="status" className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-2xl bg-ocean p-4 text-sm text-white shadow-soft sm:bottom-6 sm:w-[calc(100%-3rem)]">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#a6f0df] text-ocean"><Check className="h-5 w-5" aria-hidden="true" /></span>
-            <span className="min-w-0 flex-1"><strong className="font-semibold">Agendamento demonstrativo concluído.</strong> O fluxo com {selectedDoctor.name} foi atualizado nesta tela.</span>
-            <button className="ml-auto shrink-0 text-white/70 hover:text-white" onClick={() => setConfirmed(false)} aria-label="Fechar confirmação"><X className="h-4 w-4" /></button>
+            <span className="min-w-0 flex-1"><strong className="font-semibold">Consulta de demonstração reservada.</strong> {formatDate(confirmedAppointment.startsAt)} às {formatTime(confirmedAppointment.startsAt)} com {confirmedAppointment.doctorName}.</span>
+            <button className="ml-auto shrink-0 text-white/70 hover:text-white" onClick={() => setConfirmedAppointment(null)} aria-label="Fechar confirmação"><X className="h-4 w-4" /></button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -420,36 +581,107 @@ function SchedulePage() {
 }
 
 function QueuePage({ goTo }) {
-  const [position, setPosition] = useState(3)
   const [expanded, setExpanded] = useState(false)
   const [tipIndex, setTipIndex] = useState(0)
+  const [queueStatus, setQueueStatus] = useState('loading')
+  const [queueError, setQueueError] = useState('')
+  const [queueEntry, setQueueEntry] = useState(null)
+  const [appointment, setAppointment] = useState(null)
+
+  const formatDateTime = (value) => new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(value))
+
+  async function loadQueue() {
+    setQueueStatus('loading')
+    setQueueError('')
+
+    const { data: appointments, error: appointmentError } = await supabase
+      .from('appointments')
+      .select('id, status, created_at, professional:professionals(name, specialty), slot:availability_slots!appointments_slot_id_fkey(starts_at, ends_at)')
+      .in('status', ['scheduled', 'waiting', 'in_progress'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (appointmentError) {
+      setQueueError(appointmentError.message)
+      setQueueStatus('error')
+      return
+    }
+
+    const currentAppointment = appointments?.[0]
+
+    if (!currentAppointment) {
+      setAppointment(null)
+      setQueueEntry(null)
+      setQueueStatus('empty')
+      return
+    }
+
+    const { data: queue, error: queueError } = await supabase
+      .from('appointment_queue')
+      .select('appointment_id, position, status, updated_at')
+      .eq('appointment_id', currentAppointment.id)
+      .maybeSingle()
+
+    if (queueError) {
+      setQueueError(queueError.message)
+      setQueueStatus('error')
+      return
+    }
+
+    if (!queue) {
+      setQueueError('A consulta não possui uma entrada de fila associada.')
+      setQueueStatus('error')
+      return
+    }
+
+    setAppointment(currentAppointment)
+    setQueueEntry(queue)
+    setQueueStatus('ready')
+  }
 
   useEffect(() => {
     const timer = window.setInterval(() => setTipIndex((current) => (current + 1) % tips.length), 4800)
     return () => window.clearInterval(timer)
   }, [])
 
-  const nextPosition = () => setPosition((current) => (current > 1 ? current - 1 : current))
+  useEffect(() => {
+    loadQueue()
+  }, [])
+
+  const professional = Array.isArray(appointment?.professional) ? appointment.professional[0] : appointment?.professional
+  const slot = Array.isArray(appointment?.slot) ? appointment.slot[0] : appointment?.slot
+  const isReady = queueEntry?.status === 'ready'
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Sala de espera" title="Você está quase lá." description="Acompanhe sua posição e fique à vontade. Avisaremos assim que o profissional estiver pronto para receber você." />
+      <PageHeading eyebrow="Sala de espera" title="Acompanhe sua consulta de demonstração." description="A situação exibida é lida do banco e pertence somente à conta de paciente autenticada." />
       <div className="grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
         <div className="overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#0b5966_0%,#0d8085_100%)] p-5 text-white shadow-soft sm:p-9">
-          <div className="flex flex-col items-start gap-3 min-[420px]:flex-row min-[420px]:justify-between"><StatusPill /><span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80">Clínica geral</span></div>
-          <div className="mt-10 grid gap-8 sm:grid-cols-[.95fr_1.05fr] sm:items-end">
-            <div>
-              <p className="text-sm text-white/68">Simulação da posição na fila</p>
-              <p className="mt-2 font-display text-6xl tracking-[-0.05em] text-white">Exemplo</p>
-              <p className="mt-3 text-sm leading-6 text-white/74">Use este fluxo para visualizar como o paciente acompanha a fila antes de acessar o atendimento.</p>
-              <Button variant="light" icon={Video} className="mt-7 w-full min-[420px]:w-auto" onClick={() => (position === 1 ? goTo('atendimento') : nextPosition())}>{position === 1 ? 'Ir para atendimento' : 'Simular atualização'}</Button>
+          <div className="flex flex-col items-start gap-3 min-[420px]:flex-row min-[420px]:justify-between"><StatusPill /><span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80">{professional?.specialty ?? 'Consulta de teste'}</span></div>
+          {queueStatus === 'loading' && <p className="mt-10 rounded-2xl border border-white/15 bg-white/10 p-5 text-sm text-white/75" role="status">Carregando a situação da sua consulta...</p>}
+          {queueStatus === 'empty' && <div className="mt-10"><p className="font-display text-3xl leading-tight">Nenhuma consulta na fila.</p><p className="mt-3 max-w-lg text-sm leading-6 text-white/74">Reserve um horário fictício na tela de agendamento para acompanhar a fila por aqui.</p><Button variant="light" icon={Calendar} className="mt-7" onClick={() => goTo('agendar')}>Agendar consulta</Button></div>}
+          {queueStatus === 'error' && <div className="mt-10"><p className="font-display text-3xl leading-tight">Não foi possível carregar a fila.</p><p className="mt-3 max-w-lg text-sm leading-6 text-white/74">{queueError}</p><Button variant="light" className="mt-7" onClick={loadQueue}>Tentar novamente</Button></div>}
+          {queueStatus === 'ready' && queueEntry && (
+            <div className="mt-10 grid gap-8 sm:grid-cols-[.95fr_1.05fr] sm:items-end">
+              <div>
+                <p className="text-sm text-white/68">Situação persistida da sua consulta</p>
+                <p className="mt-2 font-display text-4xl tracking-[-0.04em] text-white">{isReady ? 'Atendimento liberado' : 'Aguardando atendimento'}</p>
+                <p className="mt-3 text-sm leading-6 text-white/74">{slot ? `Consulta agendada para ${formatDateTime(slot.starts_at)}.` : 'Consulta de demonstração vinculada à sua conta.'} Atualizada em {formatDateTime(queueEntry.updated_at)}.</p>
+                {isReady ? <Button variant="light" icon={Video} className="mt-7 w-full min-[420px]:w-auto" onClick={() => goTo('atendimento')}>Ir para atendimento</Button> : <Button variant="light" icon={Wifi} className="mt-7 w-full min-[420px]:w-auto" onClick={loadQueue}>Atualizar situação</Button>}
+              </div>
+              <motion.div key={`${queueEntry.position}-${queueEntry.status}`} initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }} aria-live="polite" className="rounded-3xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-sm">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#a6f0df]">Sua posição na fila</p>
+                <p className="mt-3 font-display text-7xl tracking-[-0.05em]">{queueEntry.position}</p>
+                <p className="mt-2 text-sm text-white/68">{isReady ? 'Você pode acessar a área de atendimento.' : queueEntry.position === 1 ? 'Você é a próxima pessoa.' : `${queueEntry.position - 1} pessoa${queueEntry.position - 1 > 1 ? 's' : ''} antes de você.`}</p>
+              </motion.div>
             </div>
-            <motion.div key={position} initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }} aria-live="polite" className="rounded-3xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#a6f0df]">Sua posição na fila</p>
-              <p className="mt-3 font-display text-7xl tracking-[-0.05em]">{position}</p>
-              <p className="mt-2 text-sm text-white/68">{position === 1 ? 'Você é a próxima pessoa.' : `${position - 1} pessoa${position - 1 > 1 ? 's' : ''} antes de você.`}</p>
-            </motion.div>
-          </div>
+          )}
         </div>
 
         <Surface className="flex flex-col justify-between" hover={false}>
@@ -486,10 +718,10 @@ function QueuePage({ goTo }) {
         </Surface>
         <Surface hover={false} className="flex flex-col gap-5 min-[440px]:flex-row min-[440px]:items-center min-[440px]:justify-between">
           <div className="flex items-center gap-4">
-            <motion.img whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=180&q=85" alt="Dra. Helena Freire" className="h-14 w-14 rounded-2xl object-cover" />
-            <div><p className="font-bold text-ink">Dra. Helena Freire</p><p className="mt-1 text-sm text-[#66808a]">Clínica geral · CRM 48.291</p></div>
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-mint text-teal"><Stethoscope className="h-6 w-6" aria-hidden="true" /></span>
+            <div><p className="font-bold text-ink">{professional?.name ?? 'Profissional de demonstração'}</p><p className="mt-1 text-sm text-[#66808a]">{professional?.specialty ?? 'Informação disponível após reservar um horário fictício.'}</p></div>
           </div>
-          <div className="flex w-full flex-col gap-2 min-[440px]:w-auto min-[440px]:flex-row"><Button variant="ghost" className="min-h-11 w-full px-4 min-[440px]:w-auto" icon={Phone}>Suporte</Button><Button variant="soft" className="min-h-11 w-full px-4 min-[440px]:w-auto" icon={Wifi}>Testar conexão</Button></div>
+          <div className="flex w-full flex-col gap-2 min-[440px]:w-auto min-[440px]:flex-row"><Button variant="soft" className="min-h-11 w-full px-4 min-[440px]:w-auto" icon={Wifi} onClick={loadQueue}>Atualizar fila</Button></div>
         </Surface>
       </div>
     </main>
@@ -676,13 +908,13 @@ function ProfilePage({ profile, setProfile }) {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Meu perfil" title="Edite seus dados de demonstração." description="Use esta tela para visualizar como uma pessoa poderia atualizar suas informações básicas." action={<Button variant={editing ? 'soft' : 'primary'} icon={editing ? Check : UserRound} onClick={() => (editing ? saveProfile() : setEditing(true))}>{editing ? 'Salvar alterações' : 'Editar dados'}</Button>} />
+      <PageHeading eyebrow="Meu perfil" title="Edite seus dados de demonstração." description="Use apenas dados fictícios enquanto esta conta de teste estiver em desenvolvimento." action={<Button variant={editing ? 'soft' : 'primary'} icon={editing ? Check : UserRound} onClick={() => (editing ? saveProfile() : setEditing(true))}>{editing ? 'Salvar alterações' : 'Editar dados'}</Button>} />
       <div className="grid gap-6 lg:grid-cols-[.72fr_1.28fr]">
         <Surface className="h-fit text-center" hover={false}>
           <motion.img whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=85" alt={profile.name} className="mx-auto h-24 w-24 rounded-3xl object-cover" />
           <h2 className="mt-5 text-lg font-bold text-ink">{profile.name}</h2>
-          <p className="mt-1 text-sm text-[#66808a]">Perfil de demonstração</p>
-          <div className="mt-7 rounded-2xl bg-fog p-4 text-left"><div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-teal" aria-hidden="true" /><p className="text-sm leading-6 text-[#5d777f]"><strong className="font-semibold text-ink">Perfil atualizado</strong><br />Você controla os dados exibidos nesta demonstração.</p></div></div>
+          <p className="mt-1 text-sm text-[#66808a]">Conta de demonstração</p>
+          <div className="mt-7 rounded-2xl bg-fog p-4 text-left"><div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-teal" aria-hidden="true" /><p className="text-sm leading-6 text-[#5d777f]"><strong className="font-semibold text-ink">Dados de teste</strong><br />Não informe CPF, endereço, dados de saúde ou documentos reais.</p></div></div>
         </Surface>
         <Surface hover={false}>
           <h2 className="text-lg font-bold text-ink">Informações pessoais</h2>
@@ -691,7 +923,7 @@ function ProfilePage({ profile, setProfile }) {
               <label key={name} className={className}><span className="mb-2 block text-sm font-semibold text-[#58717a]">{label}</span><input type={type} disabled={!editing} value={profile[name]} onChange={(event) => setProfile((current) => ({ ...current, [name]: event.target.value }))} className="min-h-12 w-full rounded-xl border border-line bg-fog px-4 text-sm text-ink outline-none transition-all placeholder:text-[#91a5ab] enabled:bg-white enabled:focus:border-teal enabled:focus:ring-4 enabled:focus:ring-[#dff5f1] disabled:cursor-default" /></label>
             ))}
           </div>
-          <div className="mt-8 border-t border-line pt-6"><p className="font-semibold text-ink">Limites do protótipo</p><p className="mt-1 text-sm leading-6 text-[#66808a]">Nesta versão, a edição serve para demonstrar o fluxo de atualização de perfil.</p><p className="mt-5 flex gap-2 rounded-xl bg-fog p-3 text-xs leading-5 text-[#66808a]"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden="true" />As alterações ficam somente neste navegador. Uma versão real precisaria de login, banco de dados e controles adequados para guardar informações de saúde.</p></div>
+          <div className="mt-8 border-t border-line pt-6"><p className="font-semibold text-ink">Limites desta etapa</p><p className="mt-1 text-sm leading-6 text-[#66808a]">A conta utiliza autenticação. A edição dos demais campos continua apenas como demonstração local.</p><p className="mt-5 flex gap-2 rounded-xl bg-fog p-3 text-xs leading-5 text-[#66808a]"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden="true" />Uma evolução para informações reais exigirá controles adicionais de privacidade, segurança e operação clínica.</p></div>
         </Surface>
       </div>
       <AnimatePresence>{saved && <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} role="status" className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-2xl bg-ocean p-4 text-sm text-white shadow-soft sm:bottom-6 sm:w-[calc(100%-3rem)]"><CircleCheck className="h-5 w-5 shrink-0 text-[#a6f0df]" aria-hidden="true" /><span className="min-w-0 flex-1">Dados atualizados nesta demonstração.</span></motion.div>}</AnimatePresence>
@@ -699,23 +931,166 @@ function ProfilePage({ profile, setProfile }) {
   )
 }
 
-function App() {
+function AuthPage() {
+  const [mode, setMode] = useState('signin')
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [feedback, setFeedback] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const isSignUp = mode === 'signup'
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setFeedback('')
+
+    if (isSignUp && fullName.trim().length < 3) {
+      setFeedback('Informe um nome de teste com pelo menos três caracteres.')
+      return
+    }
+
+    setSubmitting(true)
+    const result = isSignUp
+      ? await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { full_name: fullName.trim() } },
+      })
+      : await supabase.auth.signInWithPassword({ email: email.trim(), password })
+
+    setSubmitting(false)
+
+    if (result.error) {
+      const errorMessage = result.error.message.toLowerCase()
+      setFeedback(
+        errorMessage.includes('email rate limit')
+          ? 'O Supabase atingiu o limite temporário de e-mails de confirmação. Aguarde antes de tentar novamente e não envie várias solicitações seguidas.'
+          : result.error.message
+      )
+      return
+    }
+
+    if (isSignUp && !result.data.session) {
+      setFeedback('Conta criada. Confira o e-mail de teste para confirmar o cadastro antes de entrar.')
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f5faf9] px-4 py-8 sm:grid sm:place-items-center sm:p-8">
+      <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-line bg-white shadow-lift lg:grid-cols-[1.02fr_.98fr]">
+        <section className="bg-ocean p-7 text-white sm:p-10">
+          <Brand />
+          <p className="mt-12 text-xs font-bold uppercase tracking-[0.16em] text-[#a6f0df]">Acesso de demonstração</p>
+          <h1 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">Organize sua jornada de atendimento.</h1>
+          <p className="mt-5 max-w-md text-sm leading-7 text-white/75">Crie uma conta de teste para acompanhar as próximas etapas do MVP acadêmico da MedConnect.</p>
+          <div className="mt-10 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm leading-6 text-white/80"><ShieldCheck className="mb-2 h-5 w-5 text-[#a6f0df]" aria-hidden="true" />Use apenas dados fictícios. Não informe CPF, endereço, informações de saúde, receitas ou documentos reais.</div>
+        </section>
+        <section className="p-7 sm:p-10">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal">Conta de teste</p>
+          <h2 className="mt-2 font-display text-3xl text-ink">{isSignUp ? 'Criar acesso' : 'Entrar na MedConnect'}</h2>
+          <p className="mt-3 text-sm leading-6 text-[#66808a]">{isSignUp ? 'O cadastro cria uma conta de paciente de teste.' : 'Use uma conta criada exclusivamente para esta demonstração.'}</p>
+          <form className="mt-7 space-y-5" onSubmit={submit}>
+            {isSignUp && <label className="block"><span className="mb-2 block text-sm font-semibold text-[#58717a]">Nome de teste</span><input required minLength="3" value={fullName} onChange={(event) => setFullName(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-4 text-sm text-ink outline-none transition-all focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" placeholder="Ex.: Joana da Silva" /></label>}
+            <label className="block"><span className="mb-2 block text-sm font-semibold text-[#58717a]">E-mail de teste</span><input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-4 text-sm text-ink outline-none transition-all focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" placeholder="paciente.teste@exemplo.com" /></label>
+            <label className="block"><span className="mb-2 block text-sm font-semibold text-[#58717a]">Senha</span><input required type="password" minLength="6" autoComplete={isSignUp ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-4 text-sm text-ink outline-none transition-all focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" placeholder="No mínimo 6 caracteres" /></label>
+            {feedback && <p role="alert" className="rounded-xl bg-fog p-3 text-sm leading-6 text-[#58717a]">{feedback}</p>}
+            <Button type="submit" className="w-full" icon={ArrowRight} disabled={submitting}>{submitting ? 'Aguarde...' : isSignUp ? 'Criar conta de teste' : 'Entrar'}</Button>
+          </form>
+          <p className="mt-6 text-center text-sm text-[#66808a]">{isSignUp ? 'Já possui uma conta?' : 'Ainda não possui uma conta de teste?'} <button type="button" onClick={() => { setMode(isSignUp ? 'signin' : 'signup'); setFeedback('') }} className="font-semibold text-teal hover:text-ocean">{isSignUp ? 'Entrar' : 'Criar conta'}</button></p>
+        </section>
+      </div>
+    </main>
+  )
+}
+
+function AuthGate() {
+  const [session, setSession] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) {
+        setSession(data.session)
+        setLoading(false)
+      }
+    })
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession)
+      setLoading(false)
+    })
+
+    return () => {
+      mounted = false
+      listener.subscription.unsubscribe()
+    }
+  }, [])
+
+  if (loading) return <main className="grid min-h-screen place-items-center bg-[#f5faf9] p-6 text-center text-sm text-[#66808a]">Verificando a conta de demonstração...</main>
+  if (!session) return <AuthPage />
+
+  return <App session={session} />
+}
+
+function App({ session }) {
   const [active, setActive] = useState('inicio')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [accountRole, setAccountRole] = useState('patient')
+  const profileStorageKey = `medconnect-profile-${session.user.id}`
   const [profile, setProfile] = useState(() => {
+    const accountProfile = {
+      ...defaultProfile,
+      name: session.user.user_metadata.full_name || defaultProfile.name,
+      email: session.user.email || '',
+    }
+
     try {
-      const savedProfile = JSON.parse(window.localStorage.getItem('medconnect-profile'))
-      return savedProfile ? { ...defaultProfile, ...savedProfile } : defaultProfile
+      const savedProfile = JSON.parse(window.localStorage.getItem(profileStorageKey))
+      return savedProfile ? { ...accountProfile, ...savedProfile, email: session.user.email || '' } : accountProfile
     } catch {
-      return defaultProfile
+      return accountProfile
     }
   })
   const shortName = profile.name.trim().split(' ')[0] || 'Paciente'
 
   useEffect(() => {
-    window.localStorage.setItem('medconnect-profile', JSON.stringify(profile))
-  }, [profile])
+    let cancelled = false
+
+    async function loadAccountProfile() {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, role')
+        .eq('id', session.user.id)
+        .maybeSingle()
+
+      if (cancelled || !data) return
+
+      setAccountRole(data.role)
+      setProfile((current) => ({
+        ...current,
+        name: data.full_name || current.name,
+        email: session.user.email || '',
+      }))
+    }
+
+    loadAccountProfile()
+
+    return () => {
+      cancelled = true
+    }
+  }, [session.user.id, session.user.email])
+
+  useEffect(() => {
+    window.localStorage.setItem(profileStorageKey, JSON.stringify(profile))
+  }, [profile, profileStorageKey])
+
+  const signOut = async () => {
+    await supabase.auth.signOut()
+  }
 
   const goTo = (id) => {
     setActive(id)
@@ -750,9 +1125,9 @@ function App() {
           <div className="flex items-center gap-2.5">
             <button aria-label="Notificações" className="relative hidden h-10 w-10 place-items-center rounded-xl text-[#5e7981] transition-colors hover:bg-fog hover:text-ocean focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal sm:grid"><Bell className="h-[18px] w-[18px]" aria-hidden="true" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-teal" /></button>
             <div className="relative hidden sm:block">
-              <button onClick={() => setProfileOpen((current) => !current)} aria-expanded={profileOpen} aria-label="Abrir menu do perfil" className="flex items-center gap-2.5 rounded-2xl p-1.5 pr-2.5 transition-colors hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt={profile.name} className="h-9 w-9 rounded-xl object-cover" /><span className="text-left"><span className="block text-sm font-bold leading-4 text-ink">{shortName}</span><span className="block text-[0.69rem] leading-4 text-[#789099]">Paciente</span></span></button>
+              <button onClick={() => setProfileOpen((current) => !current)} aria-expanded={profileOpen} aria-label="Abrir menu do perfil" className="flex items-center gap-2.5 rounded-2xl p-1.5 pr-2.5 transition-colors hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt={profile.name} className="h-9 w-9 rounded-xl object-cover" /><span className="text-left"><span className="block text-sm font-bold leading-4 text-ink">{shortName}</span><span className="block text-[0.69rem] leading-4 text-[#789099]">{accountRole === 'doctor' ? 'Profissional de teste' : 'Paciente de teste'}</span></span></button>
               <AnimatePresence>
-                {profileOpen && <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.18 }} className="absolute right-0 top-[calc(100%+12px)] w-56 rounded-2xl border border-line bg-white p-2 shadow-lift"><button onClick={() => goTo('perfil')} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-ink transition-colors hover:bg-fog"><UserRound className="h-4 w-4 text-teal" aria-hidden="true" />Meu perfil</button><button onClick={() => setProfileOpen(false)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#6e858d] transition-colors hover:bg-fog"><LogOut className="h-4 w-4" aria-hidden="true" />Sair da conta</button></motion.div>}
+                {profileOpen && <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.18 }} className="absolute right-0 top-[calc(100%+12px)] w-56 rounded-2xl border border-line bg-white p-2 shadow-lift"><button onClick={() => goTo('perfil')} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-ink transition-colors hover:bg-fog"><UserRound className="h-4 w-4 text-teal" aria-hidden="true" />Meu perfil</button><button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#6e858d] transition-colors hover:bg-fog"><LogOut className="h-4 w-4" aria-hidden="true" />Sair da conta</button></motion.div>}
               </AnimatePresence>
             </div>
             <button onClick={() => setMobileOpen((current) => !current)} className="grid h-10 w-10 place-items-center rounded-xl text-ocean transition-colors hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal lg:hidden" aria-label={mobileOpen ? 'Fechar navegação' : 'Abrir navegação'} aria-expanded={mobileOpen}>{mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
@@ -765,10 +1140,10 @@ function App() {
       <AnimatePresence mode="wait">
         <motion.div key={active} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.28, ease: 'easeOut' }}>{page}</motion.div>
       </AnimatePresence>
-      <footer className="border-t border-line bg-white px-4 py-8 sm:px-6 sm:py-9 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-5 text-center text-sm text-[#70888f] sm:flex-row sm:items-center sm:justify-between sm:text-left"><div className="self-center sm:self-auto"><Brand /></div><p>© 2026 MedConnect · Projeto acadêmico de TCC.</p><div className="flex items-center justify-center gap-2 text-xs font-semibold text-teal sm:justify-start"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Protótipo acadêmico</div></div></footer>
+      <footer className="border-t border-line bg-white px-4 py-8 sm:px-6 sm:py-9 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-5 text-center text-sm text-[#70888f] sm:flex-row sm:items-center sm:justify-between sm:text-left"><div className="self-center sm:self-auto"><Brand /></div><p>© 2026 MedConnect · Davi Grigato & Gustavo Queiroz.</p><div className="flex items-center justify-center gap-2 text-xs font-semibold text-teal sm:justify-start"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Organização e praticidade</div></div></footer>
       </LayoutGroup>
     </MotionConfig>
   )
 }
 
-export default App
+export default AuthGate
