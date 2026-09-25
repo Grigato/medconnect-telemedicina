@@ -13,6 +13,7 @@ import {
   CircleHelp,
   CircleCheck,
   Clock,
+  Download,
   ExternalLink,
   FileText,
   Heart,
@@ -27,6 +28,7 @@ import {
   ShieldCheck,
   Star,
   Stethoscope,
+  Upload,
   UserRound,
   Users,
   Video,
@@ -64,7 +66,7 @@ const doctors = [
 ]
 
 const defaultProfile = {
-  name: 'Conta de teste',
+  name: 'Sua conta',
   email: '',
   phone: '',
   birthDate: '',
@@ -77,14 +79,14 @@ const defaultMessages = [
 ]
 
 const records = [
-  { date: '02 ago 2026', title: 'Receita digital (exemplo)', detail: 'Perfil demonstrativo · Clínica geral', tag: 'Demonstração' },
-  { date: '14 jul 2026', title: 'Pedido de exame (exemplo)', detail: 'Perfil demonstrativo · Cardiologia', tag: 'Demonstração' },
+  { date: '02 ago 2026', title: 'Receita digital', detail: 'Clínica geral', tag: 'Documento' },
+  { date: '14 jul 2026', title: 'Pedido de exame', detail: 'Cardiologia', tag: 'Documento' },
 ]
 
 const historyItems = [
-  { date: '02 ago 2026', title: 'Consulta de rotina (exemplo)', doctor: 'Perfil demonstrativo', specialty: 'Clínica geral' },
-  { date: '14 jul 2026', title: 'Avaliação preventiva (exemplo)', doctor: 'Perfil demonstrativo', specialty: 'Cardiologia' },
-  { date: '21 jun 2026', title: 'Orientação de exames (exemplo)', doctor: 'Perfil demonstrativo', specialty: 'Clínica geral' },
+  { date: '02 ago 2026', title: 'Consulta de rotina', doctor: 'Clínica geral', specialty: 'Clínica geral' },
+  { date: '14 jul 2026', title: 'Avaliação preventiva', doctor: 'Cardiologia', specialty: 'Cardiologia' },
+  { date: '21 jun 2026', title: 'Orientação de exames', doctor: 'Clínica geral', specialty: 'Clínica geral' },
 ]
 
 const tips = [
@@ -198,7 +200,7 @@ function HomePage({ goTo }) {
                 Agendamento e atendimento <span className="italic text-[#a6f0df]">em um só lugar.</span>
               </motion.h1>
               <motion.p variants={heroItem} className="mt-6 max-w-md text-[1.04rem] leading-7 text-white/78">
-                A MedConnect é um protótipo para organizar consultas online, fila virtual e o acesso à sala de atendimento.
+                A MedConnect organiza consultas online, fila virtual e o acesso à sala de atendimento.
               </motion.p>
               <motion.div variants={heroItem} className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button variant="light" icon={Video} className="w-full sm:w-auto" onClick={() => goTo('fila')}>Consultar agora</Button>
@@ -214,7 +216,7 @@ function HomePage({ goTo }) {
                     <img key={src} src={src} alt={`Profissional MedConnect ${index + 1}`} className="h-8 w-8 rounded-full border-2 border-[#0b6977] object-cover" />
                   ))}
                 </div>
-                <span>Perfis e dados usados apenas para demonstração.</span>
+                <span>Jornada integrada de atendimento.</span>
               </motion.div>
             </div>
 
@@ -230,18 +232,18 @@ function HomePage({ goTo }) {
                     <div className="flex items-center gap-3">
                       <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/15"><Video className="h-5 w-5" aria-hidden="true" /></div>
                       <div>
-                        <p className="text-sm font-semibold">Agendamento demonstrativo</p>
-                        <p className="mt-0.5 text-xs text-white/66">Exemplo de consulta · Clínica geral</p>
+                        <p className="text-sm font-semibold">Agendamento online</p>
+                        <p className="mt-0.5 text-xs text-white/66">Clínica geral</p>
                       </div>
                     </div>
-                    <span className="rounded-full bg-[#49d7c3]/20 px-2.5 py-1 text-[0.66rem] font-bold uppercase tracking-wider text-[#a6f0df]">Exemplo</span>
+                    <span className="rounded-full bg-[#49d7c3]/20 px-2.5 py-1 text-[0.66rem] font-bold uppercase tracking-wider text-[#a6f0df]">Online</span>
                   </div>
                 </div>
               </motion.div>
               <motion.div whileHover={cardHover} transition={{ duration: 0.25 }} className="absolute -bottom-5 -left-3 hidden rounded-2xl border border-white/60 bg-white/95 p-4 shadow-card backdrop-blur sm:block lg:-left-12">
                 <div className="flex items-center gap-3">
                   <span className="grid h-9 w-9 place-items-center rounded-xl bg-mint text-teal"><ShieldCheck className="h-[18px] w-[18px]" aria-hidden="true" /></span>
-                  <div><p className="text-xs font-bold text-ink">Acesso organizado</p><p className="mt-0.5 text-[0.68rem] text-[#66808a]">Fluxo demonstrativo</p></div>
+                  <div><p className="text-xs font-bold text-ink">Acesso organizado</p><p className="mt-0.5 text-[0.68rem] text-[#66808a]">Fluxo integrado</p></div>
                 </div>
               </motion.div>
             </motion.div>
@@ -278,7 +280,7 @@ function HomePage({ goTo }) {
           {[
             { title: 'Agendar consulta', description: 'Escolha a especialidade, o profissional e o melhor horário.', icon: Calendar, action: 'agendar', tone: 'bg-mint text-teal' },
             { title: 'Entrar na fila', description: 'Fale com um clínico geral no próximo horário disponível.', icon: Video, action: 'fila', tone: 'bg-[#e8f4fb] text-[#2874a1]' },
-            { title: 'Ver registros', description: 'Visualize exemplos de documentos e histórico de consultas.', icon: FileText, action: 'registros', tone: 'bg-[#f0edff] text-[#7460c6]' },
+            { title: 'Ver registros', description: 'Visualize documentos e histórico de consultas.', icon: FileText, action: 'registros', tone: 'bg-[#f0edff] text-[#7460c6]' },
           ].map(({ title, description, icon: Icon, action, tone }) => (
             <Surface key={title} className="group flex min-h-[220px] flex-col justify-between p-7">
               <span className={`grid h-12 w-12 place-items-center rounded-2xl ${tone}`}><Icon className="h-5 w-5" aria-hidden="true" /></span>
@@ -471,10 +473,10 @@ function SchedulePage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Agendamento" title="Escolha uma opção para sua consulta." description="Selecione uma especialidade, um perfil demonstrativo e um horário para visualizar o fluxo de agendamento." />
+      <PageHeading eyebrow="Agendamento" title="Escolha uma opção para sua consulta." description="Selecione uma especialidade, um profissional e o horário mais adequado." />
       <div className="grid gap-6 lg:grid-cols-[.7fr_1.3fr]">
         <Surface className="h-fit !bg-ocean text-white" hover={false}>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#a6f0df]">Fluxo do protótipo</p>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#a6f0df]">Agendamento online</p>
           <h2 className="mt-3 font-display text-3xl leading-tight">Agendamento em três etapas.</h2>
           <div className="mt-7 space-y-5">
             {[
@@ -512,11 +514,11 @@ function SchedulePage() {
           </Surface>
 
           <Surface hover={false}>
-            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-xl bg-mint text-sm font-bold text-teal">2</span><div><h2 className="text-lg font-bold text-ink">Escolha um perfil</h2><p className="mt-0.5 text-sm text-[#66808a]">Profissionais fictícios consultados no catálogo para {selectedSpecialty}.</p></div></div>
+            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-xl bg-mint text-sm font-bold text-teal">2</span><div><h2 className="text-lg font-bold text-ink">Escolha um profissional</h2><p className="mt-0.5 text-sm text-[#66808a]">Profissionais disponíveis no catálogo para {selectedSpecialty}.</p></div></div>
             {catalogStatus === 'loading' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando catálogo de profissionais...</p>}
             {catalogStatus === 'error' && <p className="mt-6 rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert">Não foi possível carregar o catálogo. Confira a conexão e as regras de leitura do Supabase. Detalhe: {catalogError}</p>}
-            {catalogStatus === 'empty' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">O catálogo ainda não possui profissionais fictícios.</p>}
-            {catalogStatus === 'ready' && availableDoctors.length === 0 && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Ainda não há profissionais cadastrados para esta especialidade no catálogo demonstrativo.</p>}
+            {catalogStatus === 'empty' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">O catálogo ainda não possui profissionais disponíveis.</p>}
+            {catalogStatus === 'ready' && availableDoctors.length === 0 && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Ainda não há profissionais cadastrados para esta especialidade.</p>}
             {catalogStatus === 'ready' && availableDoctors.length > 0 && (
               <>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -541,12 +543,12 @@ function SchedulePage() {
           </Surface>
 
           <Surface hover={false}>
-            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-xl bg-mint text-sm font-bold text-teal">3</span><div><h2 className="text-lg font-bold text-ink">Selecione um horário</h2><p className="mt-0.5 text-sm text-[#66808a]">Horários fictícios consultados no banco, no fuso de São Paulo.</p></div></div>
+            <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-xl bg-mint text-sm font-bold text-teal">3</span><div><h2 className="text-lg font-bold text-ink">Selecione um horário</h2><p className="mt-0.5 text-sm text-[#66808a]">Horários consultados no banco, no fuso de São Paulo.</p></div></div>
             {availabilityStatus === 'loading' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando horários disponíveis...</p>}
             {availabilityStatus === 'error' && <div className="mt-6 rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert"><p>Não foi possível carregar os horários. Confira a conexão e as regras de leitura do Supabase.</p><p className="mt-1 text-xs">Detalhe: {availabilityError}</p><Button variant="ghost" className="mt-3" onClick={loadAvailability}>Tentar novamente</Button></div>}
-            {availabilityStatus === 'empty' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Não há horários fictícios disponíveis neste momento.</p>}
+            {availabilityStatus === 'empty' && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Não há horários disponíveis neste momento.</p>}
             {availabilityStatus === 'ready' && !selectedDoctor && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Escolha um profissional disponível para consultar os horários.</p>}
-            {availabilityStatus === 'ready' && selectedDoctor && availableSlots.length === 0 && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Não há mais horários disponíveis para este perfil demonstrativo.</p>}
+            {availabilityStatus === 'ready' && selectedDoctor && availableSlots.length === 0 && <p className="mt-6 rounded-2xl border border-line bg-fog p-4 text-sm text-[#66808a]">Não há mais horários disponíveis para este profissional.</p>}
             {availabilityStatus === 'ready' && selectedDoctor && availableSlots.length > 0 && <div className="mt-6 grid gap-3 min-[470px]:grid-cols-2 xl:grid-cols-3">
               {availableSlots.map((slot) => {
                 const selected = slot.id === selectedSlot?.id
@@ -571,7 +573,7 @@ function SchedulePage() {
         {confirmedAppointment && (
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} role="status" className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-2xl bg-ocean p-4 text-sm text-white shadow-soft sm:bottom-6 sm:w-[calc(100%-3rem)]">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#a6f0df] text-ocean"><Check className="h-5 w-5" aria-hidden="true" /></span>
-            <span className="min-w-0 flex-1"><strong className="font-semibold">Consulta de demonstração reservada.</strong> {formatDate(confirmedAppointment.startsAt)} às {formatTime(confirmedAppointment.startsAt)} com {confirmedAppointment.doctorName}.</span>
+            <span className="min-w-0 flex-1"><strong className="font-semibold">Consulta reservada.</strong> {formatDate(confirmedAppointment.startsAt)} às {formatTime(confirmedAppointment.startsAt)} com {confirmedAppointment.doctorName}.</span>
             <button className="ml-auto shrink-0 text-white/70 hover:text-white" onClick={() => setConfirmedAppointment(null)} aria-label="Fechar confirmação"><X className="h-4 w-4" /></button>
           </motion.div>
         )}
@@ -660,19 +662,19 @@ function QueuePage({ goTo }) {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Sala de espera" title="Acompanhe sua consulta de demonstração." description="A situação exibida é lida do banco e pertence somente à conta de paciente autenticada." />
+      <PageHeading eyebrow="Sala de espera" title="Acompanhe sua consulta." description="A situação exibida é lida do banco e pertence somente à sua conta." />
       <div className="grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
         <div className="overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#0b5966_0%,#0d8085_100%)] p-5 text-white shadow-soft sm:p-9">
-          <div className="flex flex-col items-start gap-3 min-[420px]:flex-row min-[420px]:justify-between"><StatusPill /><span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80">{professional?.specialty ?? 'Consulta de teste'}</span></div>
+          <div className="flex flex-col items-start gap-3 min-[420px]:flex-row min-[420px]:justify-between"><StatusPill /><span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80">{professional?.specialty ?? 'Consulta'}</span></div>
           {queueStatus === 'loading' && <p className="mt-10 rounded-2xl border border-white/15 bg-white/10 p-5 text-sm text-white/75" role="status">Carregando a situação da sua consulta...</p>}
-          {queueStatus === 'empty' && <div className="mt-10"><p className="font-display text-3xl leading-tight">Nenhuma consulta na fila.</p><p className="mt-3 max-w-lg text-sm leading-6 text-white/74">Reserve um horário fictício na tela de agendamento para acompanhar a fila por aqui.</p><Button variant="light" icon={Calendar} className="mt-7" onClick={() => goTo('agendar')}>Agendar consulta</Button></div>}
+          {queueStatus === 'empty' && <div className="mt-10"><p className="font-display text-3xl leading-tight">Nenhuma consulta na fila.</p><p className="mt-3 max-w-lg text-sm leading-6 text-white/74">Reserve um horário na tela de agendamento para acompanhar a fila por aqui.</p><Button variant="light" icon={Calendar} className="mt-7" onClick={() => goTo('agendar')}>Agendar consulta</Button></div>}
           {queueStatus === 'error' && <div className="mt-10"><p className="font-display text-3xl leading-tight">Não foi possível carregar a fila.</p><p className="mt-3 max-w-lg text-sm leading-6 text-white/74">{queueError}</p><Button variant="light" className="mt-7" onClick={loadQueue}>Tentar novamente</Button></div>}
           {queueStatus === 'ready' && queueEntry && (
             <div className="mt-10 grid gap-8 sm:grid-cols-[.95fr_1.05fr] sm:items-end">
               <div>
                 <p className="text-sm text-white/68">Situação persistida da sua consulta</p>
                 <p className="mt-2 font-display text-4xl tracking-[-0.04em] text-white">{isReady ? 'Atendimento liberado' : 'Aguardando atendimento'}</p>
-                <p className="mt-3 text-sm leading-6 text-white/74">{slot ? `Consulta agendada para ${formatDateTime(slot.starts_at)}.` : 'Consulta de demonstração vinculada à sua conta.'} Atualizada em {formatDateTime(queueEntry.updated_at)}.</p>
+                <p className="mt-3 text-sm leading-6 text-white/74">{slot ? `Consulta agendada para ${formatDateTime(slot.starts_at)}.` : 'Consulta vinculada à sua conta.'} Atualizada em {formatDateTime(queueEntry.updated_at)}.</p>
                 {isReady ? <Button variant="light" icon={Video} className="mt-7 w-full min-[420px]:w-auto" onClick={() => goTo('atendimento')}>Ir para atendimento</Button> : <Button variant="light" icon={Wifi} className="mt-7 w-full min-[420px]:w-auto" onClick={loadQueue}>Atualizar situação</Button>}
               </div>
               <motion.div key={`${queueEntry.position}-${queueEntry.status}`} initial={{ opacity: 0, scale: 0.92, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }} aria-live="polite" className="rounded-3xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-sm">
@@ -719,7 +721,7 @@ function QueuePage({ goTo }) {
         <Surface hover={false} className="flex flex-col gap-5 min-[440px]:flex-row min-[440px]:items-center min-[440px]:justify-between">
           <div className="flex items-center gap-4">
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-mint text-teal"><Stethoscope className="h-6 w-6" aria-hidden="true" /></span>
-            <div><p className="font-bold text-ink">{professional?.name ?? 'Profissional de demonstração'}</p><p className="mt-1 text-sm text-[#66808a]">{professional?.specialty ?? 'Informação disponível após reservar um horário fictício.'}</p></div>
+            <div><p className="font-bold text-ink">{professional?.name ?? 'Profissional'}</p><p className="mt-1 text-sm text-[#66808a]">{professional?.specialty ?? 'Informação disponível após reservar um horário.'}</p></div>
           </div>
           <div className="flex w-full flex-col gap-2 min-[440px]:w-auto min-[440px]:flex-row"><Button variant="soft" className="min-h-11 w-full px-4 min-[440px]:w-auto" icon={Wifi} onClick={loadQueue}>Atualizar fila</Button></div>
         </Surface>
@@ -733,11 +735,17 @@ function AppointmentPage({ accountRole, profile, session }) {
   const [appointmentsStatus, setAppointmentsStatus] = useState('loading')
   const [messages, setMessages] = useState([])
   const [messagesStatus, setMessagesStatus] = useState('idle')
+  const [documents, setDocuments] = useState([])
+  const [documentsStatus, setDocumentsStatus] = useState('idle')
   const [selectedAppointmentId, setSelectedAppointmentId] = useState('')
   const [draft, setDraft] = useState('')
   const [platform, setPlatform] = useState('Google Meet')
   const [meetingUrl, setMeetingUrl] = useState('')
+  const [documentFile, setDocumentFile] = useState(null)
+  const [documentType, setDocumentType] = useState('exam_result')
   const [sending, setSending] = useState(false)
+  const [uploadingDocument, setUploadingDocument] = useState(false)
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState('')
   const [feedback, setFeedback] = useState('')
 
   const isProfessional = accountRole === 'doctor'
@@ -801,13 +809,43 @@ function AppointmentPage({ accountRole, profile, session }) {
     setMessagesStatus('ready')
   }
 
+  async function loadDocuments(appointmentId = selectedAppointmentId) {
+    if (!appointmentId) {
+      setDocuments([])
+      setDocumentsStatus('idle')
+      return
+    }
+
+    setDocumentsStatus('loading')
+    const { data, error } = await supabase
+      .from('appointment_documents')
+      .select('id, uploaded_by, document_type, file_name, storage_path, mime_type, created_at')
+      .eq('appointment_id', appointmentId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setDocuments([])
+      setDocumentsStatus('error')
+      setFeedback(`Não foi possível carregar os anexos. ${error.message}`)
+      return
+    }
+
+    setDocuments(data ?? [])
+    setDocumentsStatus('ready')
+  }
+
   useEffect(() => {
     loadAppointments()
   }, [accountRole])
 
   useEffect(() => {
     loadMessages()
+    loadDocuments()
   }, [selectedAppointmentId])
+
+  useEffect(() => {
+    setDocumentType(isProfessional ? 'prescription' : 'exam_result')
+  }, [isProfessional])
 
   useEffect(() => {
     if (!feedback) return undefined
@@ -863,45 +901,132 @@ function AppointmentPage({ accountRole, profile, session }) {
     }
   }
 
-  const otherPartyName = isProfessional ? patient?.full_name ?? 'Paciente de teste' : professional?.name ?? 'Profissional de teste'
+  async function uploadDocument() {
+    if (!selectedAppointment || !documentFile || uploadingDocument) return
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png']
+    if (!allowedTypes.includes(documentFile.type)) {
+      setFeedback('Escolha um arquivo PDF, JPEG ou PNG.')
+      return
+    }
+
+    if (documentFile.size > 5 * 1024 * 1024) {
+      setFeedback('O arquivo deve ter no máximo 5 MB.')
+      return
+    }
+
+    const safeName = documentFile.name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]/g, '-')
+    const uniqueId = window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`
+    const storagePath = `${selectedAppointment.id}/${session.user.id}/${uniqueId}-${safeName}`
+
+    setUploadingDocument(true)
+    const { error: documentError } = await supabase
+      .from('appointment_documents')
+      .insert({
+        appointment_id: selectedAppointment.id,
+        uploaded_by: session.user.id,
+        document_type: documentType,
+        file_name: documentFile.name,
+        storage_path: storagePath,
+        mime_type: documentFile.type,
+      })
+
+    if (documentError) {
+      setUploadingDocument(false)
+      setFeedback(`Não foi possível registrar o anexo. ${documentError.message}`)
+      return
+    }
+
+    const { error: uploadError } = await supabase
+      .storage
+      .from('appointment-documents')
+      .upload(storagePath, documentFile, { contentType: documentFile.type, upsert: false })
+
+    setUploadingDocument(false)
+
+    if (uploadError) {
+      setFeedback(`O anexo foi registrado, mas o envio do arquivo não foi concluído. ${uploadError.message}`)
+      return
+    }
+
+    setDocumentFile(null)
+    setFeedback('Anexo enviado para a consulta.')
+    loadDocuments(selectedAppointment.id)
+  }
+
+  async function downloadDocument(document) {
+    if (downloadingDocumentId) return
+    setDownloadingDocumentId(document.id)
+    const { data, error } = await supabase
+      .storage
+      .from('appointment-documents')
+      .createSignedUrl(document.storage_path, 60)
+    setDownloadingDocumentId('')
+
+    if (error || !data?.signedUrl) {
+      setFeedback(`Não foi possível preparar o download. ${error?.message ?? ''}`.trim())
+      return
+    }
+
+    const link = window.document.createElement('a')
+    link.href = data.signedUrl
+    link.target = '_blank'
+    link.rel = 'noreferrer'
+    link.click()
+  }
+
+  const otherPartyName = isProfessional ? patient?.full_name ?? 'Paciente' : professional?.name ?? 'Profissional'
+  const documentTypeOptions = isProfessional
+    ? [['prescription', 'Receita'], ['exam_request', 'Solicitação de exame'], ['other', 'Outro documento']]
+    : [['exam_result', 'Resultado de exame'], ['image', 'Imagem'], ['other', 'Outro anexo']]
+  const documentTypeLabel = {
+    prescription: 'Receita',
+    exam_request: 'Solicitação de exame',
+    exam_result: 'Resultado de exame',
+    image: 'Imagem',
+    other: 'Anexo',
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow={isProfessional ? 'Área profissional de teste' : 'Atendimento online'} title={isProfessional ? 'Mensagens das consultas atribuídas.' : 'Uma conversa organizada para a consulta.'} description={isProfessional ? 'Esta área restrita mostra somente consultas vinculadas ao perfil profissional autenticado.' : 'As mensagens ficam vinculadas somente à sua consulta demonstrativa. O profissional pode compartilhar um link de videochamada externo e seguro.'} />
+      <PageHeading eyebrow={isProfessional ? 'Área profissional' : 'Atendimento online'} title={isProfessional ? 'Mensagens das consultas atribuídas.' : 'Uma conversa organizada para a consulta.'} description={isProfessional ? 'Esta área restrita mostra somente consultas vinculadas ao perfil profissional autenticado.' : 'As mensagens pertencem somente à sua consulta. O profissional pode compartilhar um link de videochamada externo e seguro.'} />
       <div className="grid gap-6 lg:grid-cols-[.74fr_1.26fr]">
         <div className="space-y-6">
           <Surface hover={false} className="overflow-hidden !bg-ocean text-white">
-            <div className="flex items-start justify-between gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/12 text-[#a6f0df]"><Video className="h-5 w-5" aria-hidden="true" /></span><span className="rounded-full bg-[#a6f0df]/15 px-3 py-1.5 text-xs font-bold text-[#a6f0df]">Demonstração</span></div>
+            <div className="flex items-start justify-between gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/12 text-[#a6f0df]"><Video className="h-5 w-5" aria-hidden="true" /></span><span className="rounded-full bg-[#a6f0df]/15 px-3 py-1.5 text-xs font-bold text-[#a6f0df]">Consulta online</span></div>
             <p className="mt-7 text-xs font-bold uppercase tracking-[0.15em] text-[#a6f0df]">Consulta vinculada</p>
-            <h2 className="mt-2 font-display text-3xl leading-tight">{professional?.specialty ?? 'Selecione uma consulta de teste'}</h2>
-            <div className="mt-7 rounded-2xl border border-white/10 bg-white/10 p-4"><p className="text-sm font-bold">{professional?.name ?? (isProfessional ? profile.name : 'Profissional de demonstração')}</p><p className="mt-0.5 text-xs text-white/66">{slot ? formatDateTime(slot.starts_at) : 'Horário disponível após selecionar uma consulta.'}</p></div>
+            <h2 className="mt-2 font-display text-3xl leading-tight">{professional?.specialty ?? 'Selecione uma consulta'}</h2>
+            <div className="mt-7 rounded-2xl border border-white/10 bg-white/10 p-4"><p className="text-sm font-bold">{professional?.name ?? (isProfessional ? profile.name : 'Profissional')}</p><p className="mt-0.5 text-xs text-white/66">{slot ? formatDateTime(slot.starts_at) : 'Horário disponível após selecionar uma consulta.'}</p></div>
           </Surface>
           <Surface hover={false}>
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><ShieldCheck className="h-5 w-5" aria-hidden="true" /></span>
             <h2 className="mt-4 font-bold text-ink">Acesso restrito</h2>
-            <p className="mt-3 text-sm leading-6 text-[#5d777f]">{isProfessional ? 'Sua conta de teste só pode visualizar consultas atribuídas ao perfil profissional associado.' : 'Sua conta de teste só pode visualizar e enviar mensagens na própria consulta.'}</p>
+            <p className="mt-3 text-sm leading-6 text-[#5d777f]">{isProfessional ? 'Sua conta visualiza somente consultas atribuídas ao perfil profissional associado.' : 'Sua conta visualiza e envia mensagens somente na própria consulta.'}</p>
             <Button variant="soft" className="mt-5 min-h-11 px-4" icon={Wifi} onClick={() => { loadAppointments(); loadMessages() }}>Atualizar informações</Button>
           </Surface>
         </div>
 
         <Surface hover={false} className="flex min-h-0 flex-col p-0 sm:min-h-[610px]">
           <div className="flex flex-col gap-4 border-b border-line px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><MessageCircle className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="font-bold text-ink">Chat privado da consulta</h2><p className="mt-0.5 text-xs text-[#66808a]">{isProfessional ? 'Profissional de teste autenticada' : otherPartyName}</p></div></div>
-            {appointments.length > 1 && <label className="text-xs font-semibold text-[#66808a]"><span className="sr-only">Selecionar consulta</span><select value={selectedAppointmentId} onChange={(event) => setSelectedAppointmentId(event.target.value)} className="min-h-10 max-w-[240px] rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{appointments.map((appointment) => { const appointmentProfessional = Array.isArray(appointment.professional) ? appointment.professional[0] : appointment.professional; const appointmentPatient = Array.isArray(appointment.patient) ? appointment.patient[0] : appointment.patient; const appointmentSlot = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot; const appointmentLabel = isProfessional ? appointmentPatient?.full_name ?? 'Paciente de teste' : appointmentProfessional?.name ?? 'Consulta'; return <option key={appointment.id} value={appointment.id}>{appointmentLabel} · {appointmentSlot ? formatDateTime(appointmentSlot.starts_at) : 'horário de teste'}</option> })}</select></label>}
+            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><MessageCircle className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="font-bold text-ink">Chat privado da consulta</h2><p className="mt-0.5 text-xs text-[#66808a]">{isProfessional ? otherPartyName : otherPartyName}</p></div></div>
+            {appointments.length > 1 && <label className="text-xs font-semibold text-[#66808a]"><span className="sr-only">Selecionar consulta</span><select value={selectedAppointmentId} onChange={(event) => setSelectedAppointmentId(event.target.value)} className="min-h-10 max-w-[240px] rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{appointments.map((appointment) => { const appointmentProfessional = Array.isArray(appointment.professional) ? appointment.professional[0] : appointment.professional; const appointmentPatient = Array.isArray(appointment.patient) ? appointment.patient[0] : appointment.patient; const appointmentSlot = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot; const appointmentLabel = isProfessional ? appointmentPatient?.full_name ?? 'Paciente' : appointmentProfessional?.name ?? 'Consulta'; return <option key={appointment.id} value={appointment.id}>{appointmentLabel} · {appointmentSlot ? formatDateTime(appointmentSlot.starts_at) : 'horário'}</option> })}</select></label>}
           </div>
-          <div className="border-b border-line bg-[#fbfdfd] px-5 py-3 text-xs leading-5 text-[#6c858d] sm:px-7"><CircleHelp className="mr-1.5 inline h-3.5 w-3.5 text-teal" aria-hidden="true" />Mensagens e links pertencem somente a esta consulta demonstrativa. Não envie informações de saúde, documentos ou links reais.</div>
+          <div className="border-b border-line bg-[#fbfdfd] px-5 py-3 text-xs leading-5 text-[#6c858d] sm:px-7"><CircleHelp className="mr-1.5 inline h-3.5 w-3.5 text-teal" aria-hidden="true" />Mensagens, links e anexos pertencem somente a esta consulta. Não envie informações ou documentos reais neste ambiente.</div>
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-6 sm:px-7">
             {appointmentsStatus === 'loading' && <p className="rounded-2xl bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando consultas vinculadas...</p>}
             {appointmentsStatus === 'error' && <p className="rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert">Não foi possível carregar suas consultas. Atualize a página ou tente novamente.</p>}
-            {appointmentsStatus === 'ready' && !selectedAppointment && <p className="rounded-2xl bg-fog p-4 text-sm leading-6 text-[#66808a]">{isProfessional ? 'Ainda não há consulta vinculada à profissional de teste.' : 'Reserve um horário fictício para iniciar uma conversa privada com o profissional associado.'}</p>}
+            {appointmentsStatus === 'ready' && !selectedAppointment && <p className="rounded-2xl bg-fog p-4 text-sm leading-6 text-[#66808a]">{isProfessional ? 'Ainda não há consulta vinculada ao seu perfil profissional.' : 'Reserve um horário para iniciar uma conversa privada com o profissional associado.'}</p>}
             {selectedAppointment && messagesStatus === 'loading' && <p className="rounded-2xl bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando mensagens da consulta...</p>}
             {selectedAppointment && messagesStatus === 'error' && <p className="rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert">Não foi possível carregar as mensagens. Use “Atualizar informações” para tentar novamente.</p>}
-            {selectedAppointment && messagesStatus === 'ready' && messages.length === 0 && <p className="rounded-2xl bg-fog p-4 text-sm leading-6 text-[#66808a]">Nenhuma mensagem ainda. {isProfessional ? 'Envie uma orientação de teste ou o convite da videochamada.' : 'Você pode iniciar a conversa com uma mensagem de teste.'}</p>}
+            {selectedAppointment && messagesStatus === 'ready' && messages.length === 0 && <p className="rounded-2xl bg-fog p-4 text-sm leading-6 text-[#66808a]">Nenhuma mensagem ainda. {isProfessional ? 'Envie uma orientação ou o convite da videochamada.' : 'Você pode iniciar a conversa.'}</p>}
             <AnimatePresence initial={false}>
               {messages.map((message) => {
                 const isOwn = message.sender_id === session.user.id
                 const isProfessionalMessage = message.sender_type === 'professional'
-                const author = isProfessionalMessage ? professional?.name ?? 'Profissional de teste' : patient?.full_name ?? (isOwn ? profile.name || 'Paciente de teste' : 'Paciente de teste')
+                const author = isProfessionalMessage ? professional?.name ?? 'Profissional' : patient?.full_name ?? (isOwn ? profile.name || 'Paciente' : 'Paciente')
                 return (
                   <motion.article key={message.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex max-w-full gap-2.5 min-[420px]:max-w-[88%] ${isOwn ? 'ml-auto flex-row-reverse' : ''}`}>
                     <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold ${isProfessionalMessage ? 'bg-mint text-teal' : 'bg-[#e9f1f3] text-ocean'}`}>{initials(author)}</span>
@@ -911,8 +1036,9 @@ function AppointmentPage({ accountRole, profile, session }) {
               })}
             </AnimatePresence>
           </div>
-          {isProfessional && selectedAppointment && <div className="border-t border-line bg-fog px-5 py-4 sm:px-7"><div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-teal" aria-hidden="true" /><p className="text-xs font-bold uppercase tracking-[0.12em] text-ocean">Enviar convite de vídeo</p></div><div className="mt-3 grid gap-2 sm:grid-cols-[150px_1fr_auto]"><select value={platform} onChange={(event) => setPlatform(event.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]"><option>Google Meet</option><option>Zoom</option><option>Jitsi Meet</option></select><input value={meetingUrl} onChange={(event) => setMeetingUrl(event.target.value)} placeholder="Cole o link seguro da reunião" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" /><Button className="min-h-11 w-full px-4 sm:w-auto" icon={Link2} disabled={sending} onClick={sendMeetingInvite}>{sending ? 'Enviando...' : 'Enviar'}</Button></div><p className="mt-2 text-xs leading-5 text-[#6c858d]">Use apenas um link HTTPS de demonstração. A MedConnect não hospeda a videochamada.</p></div>}
-          {selectedAppointment && <div className="border-t border-line p-4 sm:px-7"><div className="flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-end"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitText() } }} rows="2" disabled={sending} placeholder={isProfessional ? 'Escreva uma orientação de teste para o paciente...' : 'Escreva uma mensagem de teste para o profissional...'} className="min-h-[54px] w-full flex-1 resize-none rounded-2xl border border-line bg-fog px-4 py-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:bg-white focus:ring-4 focus:ring-[#dff5f1] disabled:cursor-not-allowed disabled:opacity-70" /><Button className="min-h-[54px] w-full px-4 min-[480px]:w-auto" icon={Send} disabled={sending} onClick={submitText} aria-label="Enviar mensagem">{sending ? 'Enviando...' : 'Enviar'}</Button></div></div>}
+          {selectedAppointment && <div className="border-t border-line bg-[#fbfdfd] px-5 py-5 sm:px-7"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal" aria-hidden="true" /><h3 className="text-sm font-bold text-ink">Anexos da consulta</h3></div><p className="mt-1 text-xs leading-5 text-[#6c858d]">Compartilhe somente arquivos autorizados e vinculados a esta consulta.</p></div><label className="inline-flex cursor-pointer items-center gap-2 text-xs font-bold text-teal hover:text-ocean"><Upload className="h-4 w-4" aria-hidden="true" />{documentFile ? documentFile.name : 'Escolher arquivo'}<input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)} className="sr-only" /></label></div><div className="mt-4 space-y-2">{documentsStatus === 'loading' && <p className="text-sm text-[#66808a]">Carregando anexos...</p>}{documentsStatus === 'error' && <p className="text-sm text-[#9a3f32]">Não foi possível carregar os anexos.</p>}{documentsStatus === 'ready' && documents.length === 0 && <p className="rounded-xl bg-fog px-4 py-3 text-sm text-[#66808a]">Nenhum anexo disponível nesta consulta.</p>}{documents.map((document) => <div key={document.id} className="flex flex-col gap-3 rounded-xl border border-line bg-white p-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="truncate text-sm font-bold text-ink">{document.file_name}</p><p className="mt-1 text-xs text-[#66808a]">{documentTypeLabel[document.document_type] ?? 'Anexo'} · {formatDateTime(document.created_at)}</p></div><Button variant="ghost" className="min-h-10 shrink-0 px-3 text-xs" icon={Download} disabled={downloadingDocumentId === document.id} onClick={() => downloadDocument(document)}>{downloadingDocumentId === document.id ? 'Preparando...' : 'Baixar'}</Button></div>)}</div><div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"><select value={documentType} onChange={(event) => setDocumentType(event.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{documentTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><Button className="min-h-11 px-4" icon={Upload} disabled={!documentFile || uploadingDocument} onClick={uploadDocument}>{uploadingDocument ? 'Enviando...' : 'Enviar anexo'}</Button></div><p className="mt-2 text-xs leading-5 text-[#6c858d]">Formatos aceitos: PDF, JPEG e PNG, com até 5 MB.</p></div>}
+          {isProfessional && selectedAppointment && <div className="border-t border-line bg-fog px-5 py-4 sm:px-7"><div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-teal" aria-hidden="true" /><p className="text-xs font-bold uppercase tracking-[0.12em] text-ocean">Enviar convite de vídeo</p></div><div className="mt-3 grid gap-2 sm:grid-cols-[150px_1fr_auto]"><select value={platform} onChange={(event) => setPlatform(event.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]"><option>Google Meet</option><option>Zoom</option><option>Jitsi Meet</option></select><input value={meetingUrl} onChange={(event) => setMeetingUrl(event.target.value)} placeholder="Cole o link seguro da reunião" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" /><Button className="min-h-11 w-full px-4 sm:w-auto" icon={Link2} disabled={sending} onClick={sendMeetingInvite}>{sending ? 'Enviando...' : 'Enviar'}</Button></div><p className="mt-2 text-xs leading-5 text-[#6c858d]">Use um link HTTPS. A MedConnect não hospeda a videochamada.</p></div>}
+          {selectedAppointment && <div className="border-t border-line p-4 sm:px-7"><div className="flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-end"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitText() } }} rows="2" disabled={sending} placeholder={isProfessional ? 'Escreva uma orientação para o paciente...' : 'Escreva uma mensagem para o profissional...'} className="min-h-[54px] w-full flex-1 resize-none rounded-2xl border border-line bg-fog px-4 py-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:bg-white focus:ring-4 focus:ring-[#dff5f1] disabled:cursor-not-allowed disabled:opacity-70" /><Button className="min-h-[54px] w-full px-4 min-[480px]:w-auto" icon={Send} disabled={sending} onClick={submitText} aria-label="Enviar mensagem">{sending ? 'Enviando...' : 'Enviar'}</Button></div></div>}
         </Surface>
       </div>
       <AnimatePresence>{feedback && <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} role="status" className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-2xl bg-ocean p-4 text-sm text-white shadow-soft sm:bottom-6 sm:w-[calc(100%-3rem)]"><CircleCheck className="h-5 w-5 shrink-0 text-[#a6f0df]" aria-hidden="true" /><span className="min-w-0 flex-1">{feedback}</span></motion.div>}</AnimatePresence>
@@ -932,7 +1058,7 @@ function RecordsPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Registros" title="Exemplos de documentos e histórico." description="Esta área apresenta como receitas, pedidos e atendimentos poderiam ser organizados para o paciente." />
+      <PageHeading eyebrow="Registros" title="Documentos e histórico." description="Acompanhe receitas, solicitações e atendimentos vinculados à sua jornada." />
       <Surface hover={false} className="p-0">
         <LayoutGroup id="records-tabs">
           <div className="flex gap-1 border-b border-line px-5 pt-3 sm:px-7">
@@ -955,7 +1081,7 @@ function RecordsPage() {
                     <p className="mt-5 text-xs font-semibold text-[#718a91]">{record.date}</p>
                     <h2 className="mt-1 font-bold text-ink">{record.title}</h2>
                     <p className="mt-1.5 text-sm text-[#66808a]">{record.detail}</p>
-                    <button onClick={() => setNotice(`${record.title} aberto em modo demonstrativo.`)} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-ocean hover:text-teal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal">Visualizar documento <ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
+                    <button onClick={() => setNotice(`${record.title} aberto.`)} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-ocean hover:text-teal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal">Visualizar documento <ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
                   </motion.article>
                 ))}
               </div>
@@ -1003,13 +1129,13 @@ function ProfilePage({ profile, setProfile }) {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Meu perfil" title="Edite seus dados de demonstração." description="Use apenas dados fictícios enquanto esta conta de teste estiver em desenvolvimento." action={<Button variant={editing ? 'soft' : 'primary'} icon={editing ? Check : UserRound} onClick={() => (editing ? saveProfile() : setEditing(true))}>{editing ? 'Salvar alterações' : 'Editar dados'}</Button>} />
+      <PageHeading eyebrow="Meu perfil" title="Gerencie seus dados." description="Mantenha suas informações atualizadas." action={<Button variant={editing ? 'soft' : 'primary'} icon={editing ? Check : UserRound} onClick={() => (editing ? saveProfile() : setEditing(true))}>{editing ? 'Salvar alterações' : 'Editar dados'}</Button>} />
       <div className="grid gap-6 lg:grid-cols-[.72fr_1.28fr]">
         <Surface className="h-fit text-center" hover={false}>
           <motion.img whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=85" alt={profile.name} className="mx-auto h-24 w-24 rounded-3xl object-cover" />
           <h2 className="mt-5 text-lg font-bold text-ink">{profile.name}</h2>
-          <p className="mt-1 text-sm text-[#66808a]">Conta de demonstração</p>
-          <div className="mt-7 rounded-2xl bg-fog p-4 text-left"><div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-teal" aria-hidden="true" /><p className="text-sm leading-6 text-[#5d777f]"><strong className="font-semibold text-ink">Dados de teste</strong><br />Não informe CPF, endereço, dados de saúde ou documentos reais.</p></div></div>
+          <p className="mt-1 text-sm text-[#66808a]">Conta pessoal</p>
+          <div className="mt-7 rounded-2xl bg-fog p-4 text-left"><div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-teal" aria-hidden="true" /><p className="text-sm leading-6 text-[#5d777f]"><strong className="font-semibold text-ink">Privacidade</strong><br />Não informe CPF, endereço, dados de saúde ou documentos reais.</p></div></div>
         </Surface>
         <Surface hover={false}>
           <h2 className="text-lg font-bold text-ink">Informações pessoais</h2>
@@ -1018,10 +1144,10 @@ function ProfilePage({ profile, setProfile }) {
               <label key={name} className={className}><span className="mb-2 block text-sm font-semibold text-[#58717a]">{label}</span><input type={type} disabled={!editing} value={profile[name]} onChange={(event) => setProfile((current) => ({ ...current, [name]: event.target.value }))} className="min-h-12 w-full rounded-xl border border-line bg-fog px-4 text-sm text-ink outline-none transition-all placeholder:text-[#91a5ab] enabled:bg-white enabled:focus:border-teal enabled:focus:ring-4 enabled:focus:ring-[#dff5f1] disabled:cursor-default" /></label>
             ))}
           </div>
-          <div className="mt-8 border-t border-line pt-6"><p className="font-semibold text-ink">Limites desta etapa</p><p className="mt-1 text-sm leading-6 text-[#66808a]">A conta utiliza autenticação. A edição dos demais campos continua apenas como demonstração local.</p><p className="mt-5 flex gap-2 rounded-xl bg-fog p-3 text-xs leading-5 text-[#66808a]"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden="true" />Uma evolução para informações reais exigirá controles adicionais de privacidade, segurança e operação clínica.</p></div>
+          <div className="mt-8 border-t border-line pt-6"><p className="font-semibold text-ink">Segurança da conta</p><p className="mt-1 text-sm leading-6 text-[#66808a]">A conta utiliza autenticação para proteger o acesso às informações da consulta.</p><p className="mt-5 flex gap-2 rounded-xl bg-fog p-3 text-xs leading-5 text-[#66808a]"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden="true" />Este ambiente não deve receber dados de saúde ou documentos reais.</p></div>
         </Surface>
       </div>
-      <AnimatePresence>{saved && <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} role="status" className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-2xl bg-ocean p-4 text-sm text-white shadow-soft sm:bottom-6 sm:w-[calc(100%-3rem)]"><CircleCheck className="h-5 w-5 shrink-0 text-[#a6f0df]" aria-hidden="true" /><span className="min-w-0 flex-1">Dados atualizados nesta demonstração.</span></motion.div>}</AnimatePresence>
+      <AnimatePresence>{saved && <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} role="status" className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-2xl bg-ocean p-4 text-sm text-white shadow-soft sm:bottom-6 sm:w-[calc(100%-3rem)]"><CircleCheck className="h-5 w-5 shrink-0 text-[#a6f0df]" aria-hidden="true" /><span className="min-w-0 flex-1">Dados atualizados.</span></motion.div>}</AnimatePresence>
     </main>
   )
 }
@@ -1041,7 +1167,7 @@ function AuthPage() {
     setFeedback('')
 
     if (isSignUp && fullName.trim().length < 3) {
-      setFeedback('Informe um nome de teste com pelo menos três caracteres.')
+      setFeedback('Informe um nome com pelo menos três caracteres.')
       return
     }
 
@@ -1067,7 +1193,7 @@ function AuthPage() {
     }
 
     if (isSignUp && !result.data.session) {
-      setFeedback('Conta criada. Confira o e-mail de teste para confirmar o cadastro antes de entrar.')
+      setFeedback('Conta criada. Confira seu e-mail para confirmar o cadastro antes de entrar.')
     }
   }
 
@@ -1076,23 +1202,23 @@ function AuthPage() {
       <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-line bg-white shadow-lift lg:grid-cols-[1.02fr_.98fr]">
         <section className="bg-ocean p-7 text-white sm:p-10">
           <Brand />
-          <p className="mt-12 text-xs font-bold uppercase tracking-[0.16em] text-[#a6f0df]">Acesso de demonstração</p>
+          <p className="mt-12 text-xs font-bold uppercase tracking-[0.16em] text-[#a6f0df]">Acesso online</p>
           <h1 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">Organize sua jornada de atendimento.</h1>
-          <p className="mt-5 max-w-md text-sm leading-7 text-white/75">Crie uma conta de teste para acompanhar as próximas etapas do MVP acadêmico da MedConnect.</p>
-          <div className="mt-10 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm leading-6 text-white/80"><ShieldCheck className="mb-2 h-5 w-5 text-[#a6f0df]" aria-hidden="true" />Use apenas dados fictícios. Não informe CPF, endereço, informações de saúde, receitas ou documentos reais.</div>
+          <p className="mt-5 max-w-md text-sm leading-7 text-white/75">Crie sua conta para organizar consultas, acompanhar a fila e acessar o atendimento online.</p>
+          <div className="mt-10 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm leading-6 text-white/80"><ShieldCheck className="mb-2 h-5 w-5 text-[#a6f0df]" aria-hidden="true" />Para sua privacidade, não informe CPF, endereço, informações de saúde, receitas ou documentos reais.</div>
         </section>
         <section className="p-7 sm:p-10">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal">Conta de teste</p>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal">Sua conta</p>
           <h2 className="mt-2 font-display text-3xl text-ink">{isSignUp ? 'Criar acesso' : 'Entrar na MedConnect'}</h2>
-          <p className="mt-3 text-sm leading-6 text-[#66808a]">{isSignUp ? 'O cadastro cria uma conta de paciente de teste.' : 'Use uma conta criada exclusivamente para esta demonstração.'}</p>
+          <p className="mt-3 text-sm leading-6 text-[#66808a]">{isSignUp ? 'Crie sua conta de paciente para acessar a plataforma.' : 'Entre para acessar suas consultas e informações.'}</p>
           <form className="mt-7 space-y-5" onSubmit={submit}>
-            {isSignUp && <label className="block"><span className="mb-2 block text-sm font-semibold text-[#58717a]">Nome de teste</span><input required minLength="3" value={fullName} onChange={(event) => setFullName(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-4 text-sm text-ink outline-none transition-all focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" placeholder="Ex.: Joana da Silva" /></label>}
-            <label className="block"><span className="mb-2 block text-sm font-semibold text-[#58717a]">E-mail de teste</span><input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-4 text-sm text-ink outline-none transition-all focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" placeholder="paciente.teste@exemplo.com" /></label>
+            {isSignUp && <label className="block"><span className="mb-2 block text-sm font-semibold text-[#58717a]">Nome completo</span><input required minLength="3" value={fullName} onChange={(event) => setFullName(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-4 text-sm text-ink outline-none transition-all focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" placeholder="Ex.: Joana da Silva" /></label>}
+            <label className="block"><span className="mb-2 block text-sm font-semibold text-[#58717a]">E-mail</span><input required type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-4 text-sm text-ink outline-none transition-all focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" placeholder="nome@exemplo.com" /></label>
             <label className="block"><span className="mb-2 block text-sm font-semibold text-[#58717a]">Senha</span><input required type="password" minLength="6" autoComplete={isSignUp ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} className="min-h-12 w-full rounded-xl border border-line bg-white px-4 text-sm text-ink outline-none transition-all focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" placeholder="No mínimo 6 caracteres" /></label>
             {feedback && <p role="alert" className="rounded-xl bg-fog p-3 text-sm leading-6 text-[#58717a]">{feedback}</p>}
-            <Button type="submit" className="w-full" icon={ArrowRight} disabled={submitting}>{submitting ? 'Aguarde...' : isSignUp ? 'Criar conta de teste' : 'Entrar'}</Button>
+            <Button type="submit" className="w-full" icon={ArrowRight} disabled={submitting}>{submitting ? 'Aguarde...' : isSignUp ? 'Criar conta' : 'Entrar'}</Button>
           </form>
-          <p className="mt-6 text-center text-sm text-[#66808a]">{isSignUp ? 'Já possui uma conta?' : 'Ainda não possui uma conta de teste?'} <button type="button" onClick={() => { setMode(isSignUp ? 'signin' : 'signup'); setFeedback('') }} className="font-semibold text-teal hover:text-ocean">{isSignUp ? 'Entrar' : 'Criar conta'}</button></p>
+          <p className="mt-6 text-center text-sm text-[#66808a]">{isSignUp ? 'Já possui uma conta?' : 'Ainda não possui uma conta?'} <button type="button" onClick={() => { setMode(isSignUp ? 'signin' : 'signup'); setFeedback('') }} className="font-semibold text-teal hover:text-ocean">{isSignUp ? 'Entrar' : 'Criar conta'}</button></p>
         </section>
       </div>
     </main>
@@ -1124,7 +1250,7 @@ function AuthGate() {
     }
   }, [])
 
-  if (loading) return <main className="grid min-h-screen place-items-center bg-[#f5faf9] p-6 text-center text-sm text-[#66808a]">Verificando a conta de demonstração...</main>
+  if (loading) return <main className="grid min-h-screen place-items-center bg-[#f5faf9] p-6 text-center text-sm text-[#66808a]">Verificando sua conta...</main>
   if (!session) return <AuthPage />
 
   return <App session={session} />
@@ -1227,7 +1353,7 @@ function App({ session }) {
           <div className="flex items-center gap-2.5">
             <button aria-label="Notificações" className="relative hidden h-10 w-10 place-items-center rounded-xl text-[#5e7981] transition-colors hover:bg-fog hover:text-ocean focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal sm:grid"><Bell className="h-[18px] w-[18px]" aria-hidden="true" /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-teal" /></button>
             <div className="relative hidden sm:block">
-              <button onClick={() => setProfileOpen((current) => !current)} aria-expanded={profileOpen} aria-label="Abrir menu do perfil" className="flex items-center gap-2.5 rounded-2xl p-1.5 pr-2.5 transition-colors hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt={profile.name} className="h-9 w-9 rounded-xl object-cover" /><span className="text-left"><span className="block text-sm font-bold leading-4 text-ink">{shortName}</span><span className="block text-[0.69rem] leading-4 text-[#789099]">{accountRole === 'doctor' ? 'Profissional de teste' : 'Paciente de teste'}</span></span></button>
+              <button onClick={() => setProfileOpen((current) => !current)} aria-expanded={profileOpen} aria-label="Abrir menu do perfil" className="flex items-center gap-2.5 rounded-2xl p-1.5 pr-2.5 transition-colors hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt={profile.name} className="h-9 w-9 rounded-xl object-cover" /><span className="text-left"><span className="block text-sm font-bold leading-4 text-ink">{shortName}</span><span className="block text-[0.69rem] leading-4 text-[#789099]">{accountRole === 'doctor' ? 'Profissional' : 'Paciente'}</span></span></button>
               <AnimatePresence>
                 {profileOpen && <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.18 }} className="absolute right-0 top-[calc(100%+12px)] w-56 rounded-2xl border border-line bg-white p-2 shadow-lift"><button onClick={() => goTo('perfil')} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-ink transition-colors hover:bg-fog"><UserRound className="h-4 w-4 text-teal" aria-hidden="true" />Meu perfil</button><button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#6e858d] transition-colors hover:bg-fog"><LogOut className="h-4 w-4" aria-hidden="true" />Sair da conta</button></motion.div>}
               </AnimatePresence>
