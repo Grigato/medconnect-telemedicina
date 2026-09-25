@@ -743,6 +743,7 @@ function AppointmentPage({ accountRole, profile, session }) {
   const isProfessional = accountRole === 'doctor'
   const selectedAppointment = appointments.find((appointment) => appointment.id === selectedAppointmentId) ?? null
   const professional = Array.isArray(selectedAppointment?.professional) ? selectedAppointment.professional[0] : selectedAppointment?.professional
+  const patient = Array.isArray(selectedAppointment?.patient) ? selectedAppointment.patient[0] : selectedAppointment?.patient
   const slot = Array.isArray(selectedAppointment?.slot) ? selectedAppointment.slot[0] : selectedAppointment?.slot
 
   const formatDateTime = (value) => new Intl.DateTimeFormat('pt-BR', {
@@ -759,7 +760,7 @@ function AppointmentPage({ accountRole, profile, session }) {
     setAppointmentsStatus('loading')
     const { data, error } = await supabase
       .from('appointments')
-      .select('id, status, created_at, professional:professionals(name, specialty), slot:availability_slots!appointments_slot_id_fkey(starts_at, ends_at)')
+      .select('id, status, created_at, professional:professionals(name, specialty), patient:profiles!appointments_patient_profile_fkey(full_name), slot:availability_slots!appointments_slot_id_fkey(starts_at, ends_at)')
       .in('status', ['scheduled', 'waiting', 'in_progress'])
       .order('created_at', { ascending: false })
 
@@ -862,7 +863,7 @@ function AppointmentPage({ accountRole, profile, session }) {
     }
   }
 
-  const otherPartyName = isProfessional ? 'Paciente de teste' : professional?.name ?? 'Profissional de teste'
+  const otherPartyName = isProfessional ? patient?.full_name ?? 'Paciente de teste' : professional?.name ?? 'Profissional de teste'
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
@@ -886,7 +887,7 @@ function AppointmentPage({ accountRole, profile, session }) {
         <Surface hover={false} className="flex min-h-0 flex-col p-0 sm:min-h-[610px]">
           <div className="flex flex-col gap-4 border-b border-line px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
             <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><MessageCircle className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="font-bold text-ink">Chat privado da consulta</h2><p className="mt-0.5 text-xs text-[#66808a]">{isProfessional ? 'Profissional de teste autenticada' : otherPartyName}</p></div></div>
-            {appointments.length > 1 && <label className="text-xs font-semibold text-[#66808a]"><span className="sr-only">Selecionar consulta</span><select value={selectedAppointmentId} onChange={(event) => setSelectedAppointmentId(event.target.value)} className="min-h-10 max-w-[240px] rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{appointments.map((appointment) => { const appointmentProfessional = Array.isArray(appointment.professional) ? appointment.professional[0] : appointment.professional; const appointmentSlot = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot; return <option key={appointment.id} value={appointment.id}>{appointmentProfessional?.name ?? 'Consulta'} · {appointmentSlot ? formatDateTime(appointmentSlot.starts_at) : 'horário de teste'}</option> })}</select></label>}
+            {appointments.length > 1 && <label className="text-xs font-semibold text-[#66808a]"><span className="sr-only">Selecionar consulta</span><select value={selectedAppointmentId} onChange={(event) => setSelectedAppointmentId(event.target.value)} className="min-h-10 max-w-[240px] rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{appointments.map((appointment) => { const appointmentProfessional = Array.isArray(appointment.professional) ? appointment.professional[0] : appointment.professional; const appointmentPatient = Array.isArray(appointment.patient) ? appointment.patient[0] : appointment.patient; const appointmentSlot = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot; const appointmentLabel = isProfessional ? appointmentPatient?.full_name ?? 'Paciente de teste' : appointmentProfessional?.name ?? 'Consulta'; return <option key={appointment.id} value={appointment.id}>{appointmentLabel} · {appointmentSlot ? formatDateTime(appointmentSlot.starts_at) : 'horário de teste'}</option> })}</select></label>}
           </div>
           <div className="border-b border-line bg-[#fbfdfd] px-5 py-3 text-xs leading-5 text-[#6c858d] sm:px-7"><CircleHelp className="mr-1.5 inline h-3.5 w-3.5 text-teal" aria-hidden="true" />Mensagens e links pertencem somente a esta consulta demonstrativa. Não envie informações de saúde, documentos ou links reais.</div>
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-6 sm:px-7">
@@ -900,7 +901,7 @@ function AppointmentPage({ accountRole, profile, session }) {
               {messages.map((message) => {
                 const isOwn = message.sender_id === session.user.id
                 const isProfessionalMessage = message.sender_type === 'professional'
-                const author = isProfessionalMessage ? professional?.name ?? 'Profissional de teste' : isOwn ? profile.name || 'Paciente de teste' : 'Paciente de teste'
+                const author = isProfessionalMessage ? professional?.name ?? 'Profissional de teste' : patient?.full_name ?? (isOwn ? profile.name || 'Paciente de teste' : 'Paciente de teste')
                 return (
                   <motion.article key={message.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex max-w-full gap-2.5 min-[420px]:max-w-[88%] ${isOwn ? 'ml-auto flex-row-reverse' : ''}`}>
                     <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold ${isProfessionalMessage ? 'bg-mint text-teal' : 'bg-[#e9f1f3] text-ocean'}`}>{initials(author)}</span>
