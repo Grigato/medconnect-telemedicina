@@ -728,96 +728,190 @@ function QueuePage({ goTo }) {
   )
 }
 
-function AppointmentPage({ profile }) {
-  const [mode, setMode] = useState('patient')
-  const [messages, setMessages] = useState(() => {
-    try {
-      const savedMessages = JSON.parse(window.localStorage.getItem('medconnect-consultation-chat'))
-      return Array.isArray(savedMessages) && savedMessages.length ? savedMessages : defaultMessages
-    } catch {
-      return defaultMessages
-    }
-  })
+function AppointmentPage({ accountRole, profile, session }) {
+  const [appointments, setAppointments] = useState([])
+  const [appointmentsStatus, setAppointmentsStatus] = useState('loading')
+  const [messages, setMessages] = useState([])
+  const [messagesStatus, setMessagesStatus] = useState('idle')
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState('')
   const [draft, setDraft] = useState('')
   const [platform, setPlatform] = useState('Google Meet')
   const [meetingUrl, setMeetingUrl] = useState('')
+  const [sending, setSending] = useState(false)
   const [feedback, setFeedback] = useState('')
 
+  const isProfessional = accountRole === 'doctor'
+  const selectedAppointment = appointments.find((appointment) => appointment.id === selectedAppointmentId) ?? null
+  const professional = Array.isArray(selectedAppointment?.professional) ? selectedAppointment.professional[0] : selectedAppointment?.professional
+  const slot = Array.isArray(selectedAppointment?.slot) ? selectedAppointment.slot[0] : selectedAppointment?.slot
+
+  const formatDateTime = (value) => new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(value))
+
+  const initials = (name) => (name || '?').split(' ').filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+
+  async function loadAppointments() {
+    setAppointmentsStatus('loading')
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, status, created_at, professional:professionals(name, specialty), slot:availability_slots!appointments_slot_id_fkey(starts_at, ends_at)')
+      .in('status', ['scheduled', 'waiting', 'in_progress'])
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setAppointments([])
+      setAppointmentsStatus('error')
+      setFeedback(`Não foi possível carregar as consultas. ${error.message}`)
+      return
+    }
+
+    setAppointments(data ?? [])
+    setSelectedAppointmentId((current) => (data ?? []).some((appointment) => appointment.id === current) ? current : data?.[0]?.id ?? '')
+    setAppointmentsStatus('ready')
+  }
+
+  async function loadMessages(appointmentId = selectedAppointmentId) {
+    if (!appointmentId) {
+      setMessages([])
+      setMessagesStatus('idle')
+      return
+    }
+
+    setMessagesStatus('loading')
+    const { data, error } = await supabase
+      .from('appointment_messages')
+      .select('id, sender_id, sender_type, content, meeting_platform, meeting_url, created_at')
+      .eq('appointment_id', appointmentId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      setMessages([])
+      setMessagesStatus('error')
+      setFeedback(`Não foi possível carregar as mensagens. ${error.message}`)
+      return
+    }
+
+    setMessages(data ?? [])
+    setMessagesStatus('ready')
+  }
+
   useEffect(() => {
-    window.localStorage.setItem('medconnect-consultation-chat', JSON.stringify(messages))
-  }, [messages])
+    loadAppointments()
+  }, [accountRole])
+
+  useEffect(() => {
+    loadMessages()
+  }, [selectedAppointmentId])
 
   useEffect(() => {
     if (!feedback) return undefined
-    const timer = window.setTimeout(() => setFeedback(''), 3500)
+    const timer = window.setTimeout(() => setFeedback(''), 3800)
     return () => window.clearTimeout(timer)
   }, [feedback])
 
-  const submitText = () => {
-    const text = draft.trim()
+  async function sendMessage({ content, url = null, platformName = null }) {
+    if (!selectedAppointment || sending) return
+    const text = content.trim()
     if (!text) return
-    setMessages((current) => [...current, { id: `message-${Date.now()}`, author: mode, text }])
+
+    setSending(true)
+    const { error } = await supabase
+      .from('appointment_messages')
+      .insert({
+        appointment_id: selectedAppointment.id,
+        sender_id: session.user.id,
+        sender_type: isProfessional ? 'professional' : 'patient',
+        content: text,
+        meeting_platform: platformName,
+        meeting_url: url,
+      })
+
+    setSending(false)
+
+    if (error) {
+      setFeedback(`Não foi possível enviar a mensagem. ${error.message}`)
+      return
+    }
+
     setDraft('')
+    setMeetingUrl('')
+    setFeedback(url ? 'Convite de vídeo enviado para a consulta.' : 'Mensagem enviada.')
+    loadMessages(selectedAppointment.id)
   }
 
-  const sendMeetingInvite = () => {
+  function submitText() {
+    sendMessage({ content: draft })
+  }
+
+  function sendMeetingInvite() {
     try {
       const url = new URL(meetingUrl.trim())
       if (url.protocol !== 'https:') throw new Error('invalid-url')
-      setMessages((current) => [...current, { id: `meeting-${Date.now()}`, author: 'doctor', text: 'Sua sala de atendimento está pronta. Entre quando estiver confortável.', platform, meetingUrl: url.toString() }])
-      setMeetingUrl('')
-      setFeedback('Convite de vídeo enviado para a conversa.')
+      sendMessage({
+        content: 'Sua sala de atendimento está pronta. Entre quando estiver confortável.',
+        url: url.toString(),
+        platformName: platform,
+      })
     } catch {
       setFeedback('Use um link seguro iniciado por https:// para enviar o convite.')
     }
   }
 
+  const otherPartyName = isProfessional ? 'Paciente de teste' : professional?.name ?? 'Profissional de teste'
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Atendimento online" title="Uma conversa organizada para a consulta." description="No protótipo, o profissional compartilha pelo chat um link de videochamada criado em uma plataforma externa." />
+      <PageHeading eyebrow={isProfessional ? 'Área profissional de teste' : 'Atendimento online'} title={isProfessional ? 'Mensagens das consultas atribuídas.' : 'Uma conversa organizada para a consulta.'} description={isProfessional ? 'Esta área restrita mostra somente consultas vinculadas ao perfil profissional autenticado.' : 'As mensagens ficam vinculadas somente à sua consulta demonstrativa. O profissional pode compartilhar um link de videochamada externo e seguro.'} />
       <div className="grid gap-6 lg:grid-cols-[.74fr_1.26fr]">
         <div className="space-y-6">
           <Surface hover={false} className="overflow-hidden !bg-ocean text-white">
             <div className="flex items-start justify-between gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/12 text-[#a6f0df]"><Video className="h-5 w-5" aria-hidden="true" /></span><span className="rounded-full bg-[#a6f0df]/15 px-3 py-1.5 text-xs font-bold text-[#a6f0df]">Demonstração</span></div>
-            <p className="mt-7 text-xs font-bold uppercase tracking-[0.15em] text-[#a6f0df]">Horário ilustrativo</p>
-            <h2 className="mt-2 font-display text-3xl leading-tight">Clínica geral com perfil demonstrativo</h2>
-            <div className="mt-7 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-4"><motion.img whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} src={doctors[0].image} alt="Dra. Helena Freire" className="h-11 w-11 rounded-xl object-cover" /><div><p className="text-sm font-bold">Dra. Helena Freire</p><p className="mt-0.5 text-xs text-white/66">CRM 48.291 · Clínica geral</p></div></div>
+            <p className="mt-7 text-xs font-bold uppercase tracking-[0.15em] text-[#a6f0df]">Consulta vinculada</p>
+            <h2 className="mt-2 font-display text-3xl leading-tight">{professional?.specialty ?? 'Selecione uma consulta de teste'}</h2>
+            <div className="mt-7 rounded-2xl border border-white/10 bg-white/10 p-4"><p className="text-sm font-bold">{professional?.name ?? (isProfessional ? profile.name : 'Profissional de demonstração')}</p><p className="mt-0.5 text-xs text-white/66">{slot ? formatDateTime(slot.starts_at) : 'Horário disponível após selecionar uma consulta.'}</p></div>
           </Surface>
           <Surface hover={false}>
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><ShieldCheck className="h-5 w-5" aria-hidden="true" /></span>
-            <h2 className="mt-4 font-bold text-ink">Como funciona</h2>
-            <ol className="mt-4 space-y-3 text-sm leading-6 text-[#5d777f]">
-              {['Envie uma dúvida pelo chat se precisar.', 'Aguarde o profissional compartilhar o convite.', 'Abra o link e confirme sua entrada na plataforma escolhida.'].map((item, index) => <li key={item} className="flex gap-3"><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-mint text-[0.68rem] font-bold text-teal">{index + 1}</span>{item}</li>)}
-            </ol>
+            <h2 className="mt-4 font-bold text-ink">Acesso restrito</h2>
+            <p className="mt-3 text-sm leading-6 text-[#5d777f]">{isProfessional ? 'Sua conta de teste só pode visualizar consultas atribuídas ao perfil profissional associado.' : 'Sua conta de teste só pode visualizar e enviar mensagens na própria consulta.'}</p>
+            <Button variant="soft" className="mt-5 min-h-11 px-4" icon={Wifi} onClick={() => { loadAppointments(); loadMessages() }}>Atualizar informações</Button>
           </Surface>
         </div>
 
         <Surface hover={false} className="flex min-h-0 flex-col p-0 sm:min-h-[610px]">
           <div className="flex flex-col gap-4 border-b border-line px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><MessageCircle className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="font-bold text-ink">Chat da consulta</h2><p className="mt-0.5 text-xs text-[#66808a]">Dra. Helena Freire está disponível</p></div></div>
-            <LayoutGroup id="consultation-mode">
-              <div className="relative flex w-fit rounded-xl bg-fog p-1" aria-label="Visão de demonstração">
-                {[['patient', 'Paciente'], ['doctor', 'Profissional']].map(([id, label]) => <button key={id} onClick={() => setMode(id)} className={`relative z-10 rounded-lg px-3 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal ${mode === id ? 'text-ocean' : 'text-[#789099]'}`}>{mode === id && <motion.span layoutId="consultation-mode-active" className="absolute inset-0 -z-10 rounded-lg bg-white shadow-sm" transition={{ type: 'spring', stiffness: 430, damping: 32 }} />}{label}</button>)}
-              </div>
-            </LayoutGroup>
+            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><MessageCircle className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="font-bold text-ink">Chat privado da consulta</h2><p className="mt-0.5 text-xs text-[#66808a]">{isProfessional ? 'Profissional de teste autenticada' : otherPartyName}</p></div></div>
+            {appointments.length > 1 && <label className="text-xs font-semibold text-[#66808a]"><span className="sr-only">Selecionar consulta</span><select value={selectedAppointmentId} onChange={(event) => setSelectedAppointmentId(event.target.value)} className="min-h-10 max-w-[240px] rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{appointments.map((appointment) => { const appointmentProfessional = Array.isArray(appointment.professional) ? appointment.professional[0] : appointment.professional; const appointmentSlot = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot; return <option key={appointment.id} value={appointment.id}>{appointmentProfessional?.name ?? 'Consulta'} · {appointmentSlot ? formatDateTime(appointmentSlot.starts_at) : 'horário de teste'}</option> })}</select></label>}
           </div>
-          <div className="border-b border-line bg-[#fbfdfd] px-5 py-3 text-xs leading-5 text-[#6c858d] sm:px-7"><CircleHelp className="mr-1.5 inline h-3.5 w-3.5 text-teal" aria-hidden="true" />Modo de demonstração: em produção, o acesso de paciente e profissional é definido pelo login de cada conta.</div>
+          <div className="border-b border-line bg-[#fbfdfd] px-5 py-3 text-xs leading-5 text-[#6c858d] sm:px-7"><CircleHelp className="mr-1.5 inline h-3.5 w-3.5 text-teal" aria-hidden="true" />Mensagens e links pertencem somente a esta consulta demonstrativa. Não envie informações de saúde, documentos ou links reais.</div>
           <div className="flex-1 space-y-4 overflow-y-auto px-5 py-6 sm:px-7">
+            {appointmentsStatus === 'loading' && <p className="rounded-2xl bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando consultas vinculadas...</p>}
+            {appointmentsStatus === 'error' && <p className="rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert">Não foi possível carregar suas consultas. Atualize a página ou tente novamente.</p>}
+            {appointmentsStatus === 'ready' && !selectedAppointment && <p className="rounded-2xl bg-fog p-4 text-sm leading-6 text-[#66808a]">{isProfessional ? 'Ainda não há consulta vinculada à profissional de teste.' : 'Reserve um horário fictício para iniciar uma conversa privada com o profissional associado.'}</p>}
+            {selectedAppointment && messagesStatus === 'loading' && <p className="rounded-2xl bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando mensagens da consulta...</p>}
+            {selectedAppointment && messagesStatus === 'error' && <p className="rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert">Não foi possível carregar as mensagens. Use “Atualizar informações” para tentar novamente.</p>}
+            {selectedAppointment && messagesStatus === 'ready' && messages.length === 0 && <p className="rounded-2xl bg-fog p-4 text-sm leading-6 text-[#66808a]">Nenhuma mensagem ainda. {isProfessional ? 'Envie uma orientação de teste ou o convite da videochamada.' : 'Você pode iniciar a conversa com uma mensagem de teste.'}</p>}
             <AnimatePresence initial={false}>
               {messages.map((message) => {
-                const isOwn = message.author === mode
-                const author = message.author === 'doctor' ? 'Dra. Helena Freire' : profile.name || 'Paciente'
+                const isOwn = message.sender_id === session.user.id
+                const isProfessionalMessage = message.sender_type === 'professional'
+                const author = isProfessionalMessage ? professional?.name ?? 'Profissional de teste' : isOwn ? profile.name || 'Paciente de teste' : 'Paciente de teste'
                 return (
                   <motion.article key={message.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex max-w-full gap-2.5 min-[420px]:max-w-[88%] ${isOwn ? 'ml-auto flex-row-reverse' : ''}`}>
-                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold ${message.author === 'doctor' ? 'bg-mint text-teal' : 'bg-[#e9f1f3] text-ocean'}`}>{message.author === 'doctor' ? 'HF' : (profile.name || 'P').split(' ').map((part) => part[0]).join('').slice(0, 2)}</span>
-                    <div className={`rounded-2xl px-4 py-3 ${isOwn ? 'bg-ocean text-white' : 'bg-fog text-ink'}`}><p className={`mb-1 text-[0.67rem] font-bold ${isOwn ? 'text-white/66' : 'text-[#6d858d]'}`}>{author}</p><p className="text-sm leading-6">{message.text}</p>{message.meetingUrl && <a href={message.meetingUrl} target="_blank" rel="noreferrer" className={`mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-bold transition-colors ${isOwn ? 'bg-white text-ocean hover:bg-[#eaf8f6]' : 'bg-teal text-white hover:bg-[#0a9793]'}`}><Video className="h-4 w-4" aria-hidden="true" />Entrar pelo {message.platform}<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" /></a>}</div>
+                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-bold ${isProfessionalMessage ? 'bg-mint text-teal' : 'bg-[#e9f1f3] text-ocean'}`}>{initials(author)}</span>
+                    <div className={`rounded-2xl px-4 py-3 ${isOwn ? 'bg-ocean text-white' : 'bg-fog text-ink'}`}><p className={`mb-1 text-[0.67rem] font-bold ${isOwn ? 'text-white/66' : 'text-[#6d858d]'}`}>{author}</p><p className="text-sm leading-6">{message.content}</p><p className={`mt-2 text-[0.66rem] ${isOwn ? 'text-white/60' : 'text-[#789099]'}`}>{formatDateTime(message.created_at)}</p>{message.meeting_url && <a href={message.meeting_url} target="_blank" rel="noreferrer" className={`mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-bold transition-colors ${isOwn ? 'bg-white text-ocean hover:bg-[#eaf8f6]' : 'bg-teal text-white hover:bg-[#0a9793]'}`}><Video className="h-4 w-4" aria-hidden="true" />Entrar pelo {message.meeting_platform}<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" /></a>}</div>
                   </motion.article>
                 )
               })}
             </AnimatePresence>
           </div>
-          {mode === 'doctor' && <div className="border-t border-line bg-fog px-5 py-4 sm:px-7"><div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-teal" aria-hidden="true" /><p className="text-xs font-bold uppercase tracking-[0.12em] text-ocean">Enviar convite de vídeo</p></div><div className="mt-3 grid gap-2 sm:grid-cols-[150px_1fr_auto]"><select value={platform} onChange={(event) => setPlatform(event.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]"><option>Google Meet</option><option>Zoom</option><option>Jitsi Meet</option></select><input value={meetingUrl} onChange={(event) => setMeetingUrl(event.target.value)} placeholder="Cole o link seguro da reunião" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" /><Button className="min-h-11 w-full px-4 sm:w-auto" icon={Link2} onClick={sendMeetingInvite}>Enviar</Button></div><p className="mt-2 text-xs leading-5 text-[#6c858d]">Use o link criado pelo profissional na plataforma escolhida. Nunca envie informações clínicas sensíveis no link.</p></div>}
-          <div className="border-t border-line p-4 sm:px-7"><div className="flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-end"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitText() } }} rows="2" placeholder={mode === 'doctor' ? 'Escreva uma orientação para o paciente...' : 'Escreva uma mensagem para a médica...'} className="min-h-[54px] w-full flex-1 resize-none rounded-2xl border border-line bg-fog px-4 py-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:bg-white focus:ring-4 focus:ring-[#dff5f1]" /><Button className="min-h-[54px] w-full px-4 min-[480px]:w-auto" icon={Send} onClick={submitText} aria-label="Enviar mensagem">Enviar</Button></div></div>
+          {isProfessional && selectedAppointment && <div className="border-t border-line bg-fog px-5 py-4 sm:px-7"><div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-teal" aria-hidden="true" /><p className="text-xs font-bold uppercase tracking-[0.12em] text-ocean">Enviar convite de vídeo</p></div><div className="mt-3 grid gap-2 sm:grid-cols-[150px_1fr_auto]"><select value={platform} onChange={(event) => setPlatform(event.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]"><option>Google Meet</option><option>Zoom</option><option>Jitsi Meet</option></select><input value={meetingUrl} onChange={(event) => setMeetingUrl(event.target.value)} placeholder="Cole o link seguro da reunião" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" /><Button className="min-h-11 w-full px-4 sm:w-auto" icon={Link2} disabled={sending} onClick={sendMeetingInvite}>{sending ? 'Enviando...' : 'Enviar'}</Button></div><p className="mt-2 text-xs leading-5 text-[#6c858d]">Use apenas um link HTTPS de demonstração. A MedConnect não hospeda a videochamada.</p></div>}
+          {selectedAppointment && <div className="border-t border-line p-4 sm:px-7"><div className="flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-end"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitText() } }} rows="2" disabled={sending} placeholder={isProfessional ? 'Escreva uma orientação de teste para o paciente...' : 'Escreva uma mensagem de teste para o profissional...'} className="min-h-[54px] w-full flex-1 resize-none rounded-2xl border border-line bg-fog px-4 py-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:bg-white focus:ring-4 focus:ring-[#dff5f1] disabled:cursor-not-allowed disabled:opacity-70" /><Button className="min-h-[54px] w-full px-4 min-[480px]:w-auto" icon={Send} disabled={sending} onClick={submitText} aria-label="Enviar mensagem">{sending ? 'Enviando...' : 'Enviar'}</Button></div></div>}
         </Surface>
       </div>
       <AnimatePresence>{feedback && <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }} role="status" className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-start gap-3 rounded-2xl bg-ocean p-4 text-sm text-white shadow-soft sm:bottom-6 sm:w-[calc(100%-3rem)]"><CircleCheck className="h-5 w-5 shrink-0 text-[#a6f0df]" aria-hidden="true" /><span className="min-w-0 flex-1">{feedback}</span></motion.div>}</AnimatePresence>
@@ -1056,6 +1150,9 @@ function App({ session }) {
     }
   })
   const shortName = profile.name.trim().split(' ')[0] || 'Paciente'
+  const visibleNavItems = accountRole === 'doctor'
+    ? navItems.filter((item) => ['inicio', 'atendimento'].includes(item.id))
+    : navItems
 
   useEffect(() => {
     let cancelled = false
@@ -1088,6 +1185,10 @@ function App({ session }) {
     window.localStorage.setItem(profileStorageKey, JSON.stringify(profile))
   }, [profile, profileStorageKey])
 
+  useEffect(() => {
+    if (accountRole === 'doctor') setActive('atendimento')
+  }, [accountRole])
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
@@ -1103,7 +1204,7 @@ function App({ session }) {
     inicio: <HomePage goTo={goTo} />,
     agendar: <SchedulePage />,
     fila: <QueuePage goTo={goTo} />,
-    atendimento: <AppointmentPage profile={profile} />,
+    atendimento: <AppointmentPage accountRole={accountRole} profile={profile} session={session} />,
     registros: <RecordsPage />,
     perfil: <ProfilePage profile={profile} setProfile={setProfile} />,
   }[active]
@@ -1115,7 +1216,7 @@ function App({ session }) {
         <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:h-[76px] sm:px-6 lg:px-8">
           <button onClick={() => goTo('inicio')} aria-label="Ir para a página inicial" className="rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal"><Brand /></button>
           <nav aria-label="Navegação principal" className="hidden items-center gap-1 lg:flex">
-            {navItems.map(({ id, label, icon: Icon }) => (
+            {visibleNavItems.map(({ id, label, icon: Icon }) => (
               <button key={id} onClick={() => goTo(id)} className={`relative inline-flex min-h-10 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal ${active === id ? 'text-ocean' : 'text-[#64808a] hover:text-ocean'}`}>
                 {active === id && <motion.span layoutId="navigation-indicator" className="absolute inset-0 rounded-xl bg-[#e7f5f3]" transition={{ type: 'spring', stiffness: 420, damping: 32 }} />}
                 <Icon className="relative h-4 w-4" aria-hidden="true" /><span className="relative">{label}</span>
@@ -1134,7 +1235,7 @@ function App({ session }) {
           </div>
         </div>
         <AnimatePresence>
-          {mobileOpen && <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden border-t border-line bg-white lg:hidden" aria-label="Navegação móvel"><div className="grid gap-1 px-4 py-4 sm:px-6">{navItems.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => goTo(id)} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold ${active === id ? 'bg-[#e7f5f3] text-ocean' : 'text-[#64808a]'}`}><Icon className="h-4 w-4" aria-hidden="true" />{label}</button>)}<button onClick={() => goTo('perfil')} className="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-[#64808a]"><UserRound className="h-4 w-4" aria-hidden="true" />Meu perfil</button></div></motion.nav>}
+          {mobileOpen && <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden border-t border-line bg-white lg:hidden" aria-label="Navegação móvel"><div className="grid gap-1 px-4 py-4 sm:px-6">{visibleNavItems.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => goTo(id)} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold ${active === id ? 'bg-[#e7f5f3] text-ocean' : 'text-[#64808a]'}`}><Icon className="h-4 w-4" aria-hidden="true" />{label}</button>)}<button onClick={() => goTo('perfil')} className="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-[#64808a]"><UserRound className="h-4 w-4" aria-hidden="true" />Meu perfil</button></div></motion.nav>}
         </AnimatePresence>
       </header>
       <AnimatePresence mode="wait">
