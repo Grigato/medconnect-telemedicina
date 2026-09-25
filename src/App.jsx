@@ -74,16 +74,6 @@ const defaultProfile = {
   city: '',
 }
 
-const defaultMessages = [
-  { id: 'welcome', author: 'doctor', text: 'Olá, Joana. Sou a Dra. Helena. Quando estiver confortável, pode me enviar uma mensagem por aqui.' },
-  { id: 'ready', author: 'doctor', text: 'Assim que a consulta começar, enviarei o convite da sala de vídeo por este chat.' },
-]
-
-const records = [
-  { date: '02 ago 2026', title: 'Receita digital', detail: 'Clínica geral', tag: 'Documento' },
-  { date: '14 jul 2026', title: 'Pedido de exame', detail: 'Cardiologia', tag: 'Documento' },
-]
-
 const historyItems = [
   { date: '02 ago 2026', title: 'Consulta de rotina', doctor: 'Clínica geral', specialty: 'Clínica geral' },
   { date: '14 jul 2026', title: 'Avaliação preventiva', doctor: 'Cardiologia', specialty: 'Cardiologia' },
@@ -1049,9 +1039,70 @@ function AppointmentPage({ accountRole, profile, session }) {
   )
 }
 
-function RecordsPage() {
-  const [tab, setTab] = useState('receitas')
+function RecordsPage({ session }) {
+  const [tab, setTab] = useState('documentos')
   const [notice, setNotice] = useState('')
+  const [documents, setDocuments] = useState([])
+  const [documentsStatus, setDocumentsStatus] = useState('loading')
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState('')
+
+  const documentTypeLabel = {
+    prescription: 'Receita',
+    exam_request: 'Solicitação de exame',
+    exam_result: 'Resultado de exame',
+    image: 'Imagem',
+    other: 'Anexo',
+  }
+
+  const formatDate = (value) => new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'America/Sao_Paulo',
+  }).format(new Date(value))
+
+  async function loadDocuments() {
+    setDocumentsStatus('loading')
+    const { data, error } = await supabase
+      .from('appointment_documents')
+      .select('id, document_type, file_name, storage_path, mime_type, created_at')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setDocuments([])
+      setDocumentsStatus('error')
+      setNotice(`Não foi possível carregar seus documentos. ${error.message}`)
+      return
+    }
+
+    setDocuments(data ?? [])
+    setDocumentsStatus('ready')
+  }
+
+  async function downloadDocument(document) {
+    if (downloadingDocumentId) return
+    setDownloadingDocumentId(document.id)
+    const { data, error } = await supabase
+      .storage
+      .from('appointment-documents')
+      .createSignedUrl(document.storage_path, 60)
+    setDownloadingDocumentId('')
+
+    if (error || !data?.signedUrl) {
+      setNotice(`Não foi possível preparar o download. ${error?.message ?? ''}`.trim())
+      return
+    }
+
+    const link = window.document.createElement('a')
+    link.href = data.signedUrl
+    link.target = '_blank'
+    link.rel = 'noreferrer'
+    link.click()
+  }
+
+  useEffect(() => {
+    loadDocuments()
+  }, [session.user.id])
 
   useEffect(() => {
     if (!notice) return undefined
@@ -1061,33 +1112,26 @@ function RecordsPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Registros" title="Documentos e histórico." description="Acompanhe receitas, solicitações e atendimentos vinculados à sua jornada." />
+      <PageHeading eyebrow="Registros" title="Documentos e histórico." description="Acesse os arquivos compartilhados nas suas consultas e acompanhe sua jornada." />
       <Surface hover={false} className="p-0">
         <LayoutGroup id="records-tabs">
           <div className="flex gap-1 border-b border-line px-5 pt-3 sm:px-7">
-            {[['receitas', 'Receitas e pedidos', FileText], ['historico', 'Histórico de consultas', History]].map(([id, label, Icon]) => (
+            {[['documentos', 'Documentos', FileText], ['historico', 'Histórico de consultas', History]].map(([id, label, Icon]) => (
               <button key={id} onClick={() => setTab(id)} className={`relative inline-flex min-h-14 items-center gap-2 px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-teal sm:px-5 ${tab === id ? 'text-ocean' : 'text-[#789099] hover:text-ocean'}`}>
                 <Icon className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{label}</span><span className="sm:hidden">{id === 'receitas' ? 'Receitas' : 'Histórico'}</span>
+                <span className="hidden sm:inline">{label}</span><span className="sm:hidden">{id === 'documentos' ? 'Documentos' : 'Histórico'}</span>
                 {tab === id && <motion.span layoutId="records-active-tab" className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-teal sm:inset-x-5" transition={{ type: 'spring', stiffness: 430, damping: 32 }} />}
               </button>
             ))}
           </div>
         </LayoutGroup>
         <AnimatePresence mode="wait">
-          {tab === 'receitas' ? (
-            <motion.div key="receitas" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="p-4 sm:p-7">
-              <div className="grid gap-4 lg:grid-cols-2">
-                {records.map((record) => (
-                  <motion.article key={record.title} whileHover={cardHover} transition={{ duration: 0.25 }} className="rounded-2xl border border-line bg-fog p-5">
-                    <div className="flex items-start justify-between gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-teal shadow-sm"><FileText className="h-5 w-5" aria-hidden="true" /></span><span className="rounded-full bg-white px-2.5 py-1 text-[0.68rem] font-semibold text-[#66808a]">{record.tag}</span></div>
-                    <p className="mt-5 text-xs font-semibold text-[#718a91]">{record.date}</p>
-                    <h2 className="mt-1 font-bold text-ink">{record.title}</h2>
-                    <p className="mt-1.5 text-sm text-[#66808a]">{record.detail}</p>
-                    <button onClick={() => setNotice(`${record.title} aberto.`)} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-ocean hover:text-teal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal">Visualizar documento <ArrowRight className="h-4 w-4" aria-hidden="true" /></button>
-                  </motion.article>
-                ))}
-              </div>
+          {tab === 'documentos' ? (
+            <motion.div key="documentos" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="p-4 sm:p-7">
+              {documentsStatus === 'loading' && <p className="rounded-2xl bg-fog p-4 text-sm text-[#66808a]" role="status">Carregando documentos...</p>}
+              {documentsStatus === 'error' && <p className="rounded-2xl border border-[#edb8b0] bg-[#fff3f1] p-4 text-sm text-[#9a3f32]" role="alert">Não foi possível carregar seus documentos. Atualize a página e tente novamente.</p>}
+              {documentsStatus === 'ready' && documents.length === 0 && <div className="rounded-2xl bg-fog p-6 text-center"><span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-white text-teal"><FileText className="h-5 w-5" aria-hidden="true" /></span><h2 className="mt-4 font-bold text-ink">Nenhum documento disponível</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#66808a]">Os arquivos compartilhados em uma consulta aparecerão aqui para download.</p></div>}
+              {documentsStatus === 'ready' && documents.length > 0 && <div className="grid gap-4 lg:grid-cols-2">{documents.map((document) => <motion.article key={document.id} whileHover={cardHover} transition={{ duration: 0.25 }} className="rounded-2xl border border-line bg-fog p-5"><div className="flex items-start justify-between gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-teal shadow-sm"><FileText className="h-5 w-5" aria-hidden="true" /></span><span className="rounded-full bg-white px-2.5 py-1 text-[0.68rem] font-semibold text-[#66808a]">{documentTypeLabel[document.document_type] ?? 'Documento'}</span></div><p className="mt-5 text-xs font-semibold text-[#718a91]">Enviado em {formatDate(document.created_at)}</p><h2 className="mt-1 truncate font-bold text-ink">{document.file_name}</h2><p className="mt-1.5 text-sm text-[#66808a]">Arquivo protegido e vinculado a uma consulta da sua conta.</p><Button variant="ghost" className="mt-5 min-h-10 px-3 text-xs" icon={Download} disabled={downloadingDocumentId === document.id} onClick={() => downloadDocument(document)}>{downloadingDocumentId === document.id ? 'Preparando...' : 'Baixar documento'}</Button></motion.article>)}</div>}
             </motion.div>
           ) : (
             <motion.div key="historico" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="divide-y divide-line p-4 sm:p-7">
@@ -1335,7 +1379,7 @@ function App({ session }) {
     agendar: <SchedulePage />,
     fila: <QueuePage goTo={goTo} />,
     atendimento: <AppointmentPage accountRole={accountRole} profile={profile} session={session} />,
-    registros: <RecordsPage />,
+    registros: <RecordsPage session={session} />,
     perfil: <ProfilePage profile={profile} setProfile={setProfile} />,
   }[active]
 
