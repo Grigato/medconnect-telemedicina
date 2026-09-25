@@ -1,59 +1,116 @@
-# MedConnect
+# 🩺 MedConnect
 
-Projeto acadêmico de uma plataforma web para organizar agendamentos e teleatendimentos. A aplicação utiliza somente contas, profissionais, horários, mensagens e arquivos fictícios para fins de desenvolvimento e apresentação do TCC.
+### Plataforma web para organização do atendimento remoto
 
-## Tecnologias
+Projeto acadêmico desenvolvido para organizar etapas remotas da jornada do paciente em uma única interface. A MedConnect reúne descoberta de profissionais, agendamento, fila, atendimento por chat, compartilhamento de link externo e acesso a documentos vinculados à consulta.
 
-- React
-- Tailwind CSS
-- Framer Motion
-- Lucide React
-- Vite
-- Supabase Auth
-- PostgreSQL e Storage do Supabase
+🔗 **Acesso público:** [medconnect-telemedicina-phi.vercel.app](https://medconnect-telemedicina-phi.vercel.app)
 
-## Requisitos
+> [!IMPORTANT]
+> A MedConnect utiliza exclusivamente contas, profissionais, horários, mensagens e arquivos fictícios. Não é uma clínica, não realiza teleconsultas e não deve receber CPF, endereço, informações de saúde ou documentos reais.
+
+## ✨ Funcionalidades
+
+- **Acesso e perfis:** cadastro, confirmação por e-mail, login e perfis com papéis de paciente ou profissional.
+- **Catálogo e agendamento:** profissionais fictícios, horários disponíveis e reserva persistida com prevenção de conflito.
+- **Sala de espera:** fila associada à consulta e visível somente à conta participante.
+- **Atendimento:** chat privado por consulta e convite HTTPS para uma plataforma externa de vídeo.
+- **Documentos:** envio, acesso e download autorizado de PDFs, imagens JPEG e PNG fictícios.
+- **Meus registros:** documentos da consulta disponíveis em uma área própria para o paciente.
+- **Responsividade:** interface adaptada para telas menores e maiores.
+
+## 🛠️ Tecnologias utilizadas
+
+| Tecnologia | Finalidade |
+| --- | --- |
+| React + Vite | Interface web e ambiente de desenvolvimento |
+| Tailwind CSS | Estilização responsiva |
+| Framer Motion | Transições e feedback visual |
+| Lucide React | Ícones da interface |
+| Supabase Auth | Cadastro e autenticação |
+| PostgreSQL + RLS | Persistência e regras de acesso por registro |
+| Supabase Storage | Arquivos privados vinculados às consultas |
+| Vercel | Publicação da aplicação |
+
+## ▶️ Como executar localmente
+
+### Pré-requisitos
 
 - Node.js LTS
-- Git, apenas para baixar e sincronizar o projeto pelo GitHub
+- Um projeto Supabase configurado para o ambiente acadêmico
 
-## Abrir em outro computador
+### 1. Baixe o projeto
 
-No terminal, escolha uma pasta e execute:
-
-```bash
+```powershell
 git clone https://github.com/Grigato/medconnect-telemedicina.git
 cd medconnect-telemedicina
-npm.cmd install
+```
+
+### 2. Configure as variáveis de ambiente
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Preencha o arquivo `.env.local` com a URL e a chave **publishable** do projeto Supabase:
+
+```env
+VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=SUA_CHAVE_PUBLICA
+```
+
+Nunca use uma chave `service_role` ou administrativa no front-end, nem envie `.env.local` ao GitHub.
+
+### 3. Instale e inicie
+
+```powershell
+npm.cmd ci
 npm.cmd run dev
 ```
 
-Depois, abra o endereço exibido no terminal, normalmente `http://localhost:5173`.
+Abra o endereço informado pelo Vite, normalmente `http://localhost:5173`.
 
-Antes de iniciar, crie um arquivo `.env.local` na raiz a partir de `.env.example` e informe a URL e a chave pública do projeto Supabase. Essas variáveis também devem ser cadastradas na plataforma de hospedagem. Nunca use uma chave administrativa `service_role` no front-end.
+## 🗃️ Banco de dados
 
-## Gerar versão de produção
+Os scripts SQL versionados estão em [`supabase/`](supabase/). Eles registram as tabelas e políticas aplicadas durante a evolução do projeto:
 
-```bash
+- perfis e autenticação;
+- horários e consultas;
+- fila;
+- mensagens privadas;
+- associação de conta profissional;
+- documentos privados.
+
+Execute apenas scripts que ainda não foram aplicados ao projeto Supabase. A tabela base `professionals`, contendo o catálogo fictício, deve existir antes das demais etapas.
+
+## 📁 Estrutura do projeto
+
+```text
+medconnect-telemedicina/
+├── src/
+│   ├── App.jsx                 # Interface e fluxos da aplicação
+│   └── lib/supabaseClient.js   # Cliente do Supabase
+├── supabase/                   # Scripts SQL e políticas RLS
+├── .env.example                # Modelo de variáveis de ambiente
+└── package.json                # Dependências e comandos
+```
+
+## ✅ Verificação de produção
+
+```powershell
 npm.cmd run build
 ```
 
-## Escopo atual
+Após enviar alterações para a branch `main`, a Vercel cria uma nova publicação automaticamente.
 
-As entregas implementadas até agora são:
+## 🔒 Escopo acadêmico
 
-- Cadastro, confirmação de e-mail, entrada e saída de contas de paciente.
-- Perfis com papéis de paciente ou profissional e políticas RLS no Supabase.
-- Catálogo de profissionais, horários e agendamento persistido, com prevenção de reserva duplicada.
-- Fila vinculada à consulta agendada.
-- Chat privado por consulta e convite HTTPS para uma sala de vídeo externa.
-- Área profissional restrita às consultas atribuídas à conta autenticada.
-- Anexos privados por consulta: profissional pode incluir prescrições e solicitações; paciente pode incluir resultados de exames e imagens. Os arquivos são armazenados no bucket privado `appointment-documents` e liberados somente aos participantes da consulta.
+O projeto demonstra a viabilidade técnica de organizar um fluxo remoto com dados fictícios. Estão fora do escopo: prontuário clínico, videochamada hospedada, prescrição digital válida, pagamentos, dados reais, testes de desempenho, validação de segurança abrangente e estudo de usabilidade com participantes.
 
-Não há videochamada hospedada pela MedConnect, prontuário clínico real, pagamentos, nem permissão para usar informações pessoais, dados de saúde ou documentos reais.
+## 👥 Equipe
 
-## Banco de dados e migrações
+- Davi Grigato Escano Rodrigues
+- Gustavo Queiroz Lacerda
+- Rafael Teixeira dos Santos
 
-Os scripts SQL ficam em [`supabase/`](supabase). Eles devem ser executados na ordem numérica no SQL Editor do projeto Supabase. Eles registram a estrutura e as políticas de segurança aplicadas a cada etapa; não execute novamente um script já aplicado sem primeiro conferir o estado do banco.
-
-Após uma alteração no código, envie-a ao GitHub. A hospedagem na Vercel gera uma nova publicação automaticamente a partir da branch `main`.
+Trabalho de Conclusão de Curso em Sistemas de Informação — UGB/FERP.
