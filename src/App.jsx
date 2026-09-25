@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'framer-motion'
 import { supabase } from './lib/supabaseClient'
 import {
@@ -735,6 +735,7 @@ function AppointmentPage({ accountRole, profile, session }) {
   const [documentFile, setDocumentFile] = useState(null)
   const [documentType, setDocumentType] = useState('exam_result')
   const [attachmentPanelOpen, setAttachmentPanelOpen] = useState(false)
+  const documentInputRef = useRef(null)
   const [sending, setSending] = useState(false)
   const [uploadingDocument, setUploadingDocument] = useState(false)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState('')
@@ -945,6 +946,7 @@ function AppointmentPage({ accountRole, profile, session }) {
     }
 
     setDocumentFile(null)
+    if (documentInputRef.current) documentInputRef.current.value = ''
     setAttachmentPanelOpen(false)
     setFeedback('Anexo enviado para a consulta.')
     loadDocuments(selectedAppointment.id)
@@ -1004,7 +1006,7 @@ function AppointmentPage({ accountRole, profile, session }) {
 
         <Surface hover={false} className="flex min-h-0 flex-col p-0 sm:min-h-[610px]">
           <div className="flex flex-col gap-4 border-b border-line px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><MessageCircle className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="font-bold text-ink">Chat privado da consulta</h2><p className="mt-0.5 text-xs text-[#66808a]">{isProfessional ? otherPartyName : otherPartyName}</p></div></div>
+            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-mint text-teal"><MessageCircle className="h-5 w-5" aria-hidden="true" /></span><div><h2 className="font-bold text-ink">Chat privado da consulta</h2><p className="mt-0.5 text-xs text-[#66808a]">{otherPartyName}</p></div></div>
             {appointments.length > 1 && <label className="text-xs font-semibold text-[#66808a]"><span className="sr-only">Selecionar consulta</span><select value={selectedAppointmentId} onChange={(event) => setSelectedAppointmentId(event.target.value)} className="min-h-10 max-w-[240px] rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{appointments.map((appointment) => { const appointmentProfessional = Array.isArray(appointment.professional) ? appointment.professional[0] : appointment.professional; const appointmentPatient = Array.isArray(appointment.patient) ? appointment.patient[0] : appointment.patient; const appointmentSlot = Array.isArray(appointment.slot) ? appointment.slot[0] : appointment.slot; const appointmentLabel = isProfessional ? appointmentPatient?.full_name ?? 'Paciente' : appointmentProfessional?.name ?? 'Consulta'; return <option key={appointment.id} value={appointment.id}>{appointmentLabel} · {appointmentSlot ? formatDateTime(appointmentSlot.starts_at) : 'horário'}</option> })}</select></label>}
           </div>
           <div className="border-b border-line bg-[#fbfdfd] px-5 py-3 text-xs leading-5 text-[#6c858d] sm:px-7"><CircleHelp className="mr-1.5 inline h-3.5 w-3.5 text-teal" aria-hidden="true" />Mensagens, links e anexos pertencem somente a esta consulta. Não envie informações ou documentos reais neste ambiente.</div>
@@ -1029,7 +1031,7 @@ function AppointmentPage({ accountRole, profile, session }) {
               })}
             </AnimatePresence>
           </div>
-          {selectedAppointment && attachmentPanelOpen && <div className="border-t border-line bg-[#fbfdfd] px-5 py-4 sm:px-7"><div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold text-ink">Adicionar anexo</h3><p className="mt-1 text-xs text-[#6c858d]">PDF, JPEG ou PNG, com até 5 MB.</p></div><button type="button" onClick={() => setAttachmentPanelOpen(false)} className="grid h-9 w-9 place-items-center rounded-xl text-[#66808a] transition-colors hover:bg-fog hover:text-ocean" aria-label="Fechar anexos"><X className="h-4 w-4" aria-hidden="true" /></button></div><div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px_auto]"><label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink transition-colors hover:border-teal"><Upload className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" /><span className="truncate">{documentFile ? documentFile.name : 'Escolher arquivo'}</span><input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)} className="sr-only" /></label><select value={documentType} onChange={(event) => setDocumentType(event.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{documentTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><Button className="min-h-11 px-4" icon={Upload} disabled={!documentFile || uploadingDocument} onClick={uploadDocument}>{uploadingDocument ? 'Enviando...' : 'Enviar'}</Button></div><div className="mt-3 border-t border-line pt-3">{documentsStatus === 'loading' && <p className="text-xs text-[#66808a]">Carregando arquivos...</p>}{documentsStatus === 'error' && <p className="text-xs text-[#9a3f32]">Não foi possível carregar os arquivos.</p>}{documentsStatus === 'ready' && documents.length === 0 && <p className="text-xs text-[#66808a]">Nenhum arquivo compartilhado nesta consulta.</p>}{documents.length > 0 && <div className="flex flex-wrap gap-2">{documents.map((document) => <button key={document.id} type="button" onClick={() => downloadDocument(document)} disabled={downloadingDocumentId === document.id} className="inline-flex max-w-full items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-teal disabled:opacity-60"><FileText className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" /><span className="max-w-40 truncate">{document.file_name}</span><Download className="h-3.5 w-3.5 shrink-0 text-[#66808a]" aria-hidden="true" /></button>)}</div>}</div></div>}
+          {selectedAppointment && attachmentPanelOpen && <div className="border-t border-line bg-[#fbfdfd] px-5 py-4 sm:px-7"><div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-bold text-ink">Adicionar anexo</h3><p className="mt-1 text-xs text-[#6c858d]">PDF, JPEG ou PNG, com até 5 MB.</p></div><button type="button" onClick={() => setAttachmentPanelOpen(false)} className="grid h-9 w-9 place-items-center rounded-xl text-[#66808a] transition-colors hover:bg-fog hover:text-ocean" aria-label="Fechar anexos"><X className="h-4 w-4" aria-hidden="true" /></button></div><div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px_auto]"><label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink transition-colors hover:border-teal"><Upload className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" /><span className="truncate">{documentFile ? documentFile.name : 'Escolher arquivo'}</span><input ref={documentInputRef} type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)} className="sr-only" /></label><select value={documentType} onChange={(event) => setDocumentType(event.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]">{documentTypeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><Button className="min-h-11 px-4" icon={Upload} disabled={!documentFile || uploadingDocument} onClick={uploadDocument}>{uploadingDocument ? 'Enviando...' : 'Enviar'}</Button></div><div className="mt-3 border-t border-line pt-3">{documentsStatus === 'loading' && <p className="text-xs text-[#66808a]">Carregando arquivos...</p>}{documentsStatus === 'error' && <p className="text-xs text-[#9a3f32]">Não foi possível carregar os arquivos.</p>}{documentsStatus === 'ready' && documents.length === 0 && <p className="text-xs text-[#66808a]">Nenhum arquivo compartilhado nesta consulta.</p>}{documents.length > 0 && <div className="flex flex-wrap gap-2">{documents.map((document) => <button key={document.id} type="button" onClick={() => downloadDocument(document)} disabled={downloadingDocumentId === document.id} className="inline-flex max-w-full items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-teal disabled:opacity-60"><FileText className="h-4 w-4 shrink-0 text-teal" aria-hidden="true" /><span className="max-w-40 truncate">{document.file_name}</span><Download className="h-3.5 w-3.5 shrink-0 text-[#66808a]" aria-hidden="true" /></button>)}</div>}</div></div>}
           {isProfessional && selectedAppointment && <div className="border-t border-line bg-fog px-5 py-4 sm:px-7"><div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-teal" aria-hidden="true" /><p className="text-xs font-bold uppercase tracking-[0.12em] text-ocean">Enviar convite de vídeo</p></div><div className="mt-3 grid gap-2 sm:grid-cols-[150px_1fr_auto]"><select value={platform} onChange={(event) => setPlatform(event.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold text-ink outline-none focus:border-teal focus:ring-4 focus:ring-[#dff5f1]"><option>Google Meet</option><option>Zoom</option><option>Jitsi Meet</option></select><input value={meetingUrl} onChange={(event) => setMeetingUrl(event.target.value)} placeholder="Cole o link seguro da reunião" className="min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:ring-4 focus:ring-[#dff5f1]" /><Button className="min-h-11 w-full px-4 sm:w-auto" icon={Link2} disabled={sending} onClick={sendMeetingInvite}>{sending ? 'Enviando...' : 'Enviar'}</Button></div><p className="mt-2 text-xs leading-5 text-[#6c858d]">Use um link HTTPS. A MedConnect não hospeda a videochamada.</p></div>}
           {selectedAppointment && <div className="border-t border-line p-4 sm:px-7"><div className="flex items-end gap-2 sm:gap-3"><button type="button" onClick={() => setAttachmentPanelOpen((isOpen) => !isOpen)} className={`grid h-[54px] w-[54px] shrink-0 place-items-center rounded-2xl border text-lg font-medium transition-colors ${attachmentPanelOpen ? 'border-teal bg-mint text-teal' : 'border-line bg-fog text-[#66808a] hover:border-teal hover:text-teal'}`} aria-label="Adicionar ou visualizar anexos" aria-expanded={attachmentPanelOpen}><Plus className="h-5 w-5" aria-hidden="true" /></button><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitText() } }} rows="2" disabled={sending} placeholder={isProfessional ? 'Escreva uma orientação para o paciente...' : 'Escreva uma mensagem para o profissional...'} className="min-h-[54px] min-w-0 flex-1 resize-none rounded-2xl border border-line bg-fog px-4 py-3 text-sm text-ink outline-none placeholder:text-[#91a5ab] focus:border-teal focus:bg-white focus:ring-4 focus:ring-[#dff5f1] disabled:cursor-not-allowed disabled:opacity-70" /><Button className="min-h-[54px] shrink-0 px-4" icon={Send} disabled={sending} onClick={submitText} aria-label="Enviar mensagem">{sending ? 'Enviando...' : 'Enviar'}</Button></div></div>}
         </Surface>
@@ -1155,6 +1157,7 @@ function RecordsPage({ session }) {
 function ProfilePage({ profile, setProfile }) {
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [draft, setDraft] = useState(profile)
   const fields = [
     { label: 'Nome completo', name: 'name', type: 'text', className: 'sm:col-span-2' },
     { label: 'E-mail', name: 'email', type: 'email' },
@@ -1169,14 +1172,31 @@ function ProfilePage({ profile, setProfile }) {
     return () => window.clearTimeout(timer)
   }, [saved])
 
+  useEffect(() => {
+    if (!editing) {
+      setDraft(profile)
+    }
+  }, [editing, profile])
+
   const saveProfile = () => {
+    setProfile(draft)
     setEditing(false)
     setSaved(true)
   }
 
+  const startEditing = () => {
+    setDraft(profile)
+    setEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setDraft(profile)
+    setEditing(false)
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <PageHeading eyebrow="Meu perfil" title="Gerencie seus dados." description="Mantenha suas informações atualizadas." action={<Button variant={editing ? 'soft' : 'primary'} icon={editing ? Check : UserRound} onClick={() => (editing ? saveProfile() : setEditing(true))}>{editing ? 'Salvar alterações' : 'Editar dados'}</Button>} />
+      <PageHeading eyebrow="Meu perfil" title="Gerencie seus dados." description="Mantenha suas informações atualizadas." action={editing ? <div className="flex flex-wrap items-center gap-2"><Button variant="ghost" onClick={cancelEditing}>Cancelar</Button><Button icon={Check} onClick={saveProfile}>Salvar alterações</Button></div> : <Button icon={UserRound} onClick={startEditing}>Editar dados</Button>} />
       <div className="grid gap-6 lg:grid-cols-[.72fr_1.28fr]">
         <Surface className="h-fit text-center" hover={false}>
           <motion.img whileHover={{ scale: 1.05 }} transition={{ duration: 0.3 }} src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=85" alt={profile.name} className="mx-auto h-24 w-24 rounded-3xl object-cover" />
@@ -1188,7 +1208,7 @@ function ProfilePage({ profile, setProfile }) {
           <h2 className="text-lg font-bold text-ink">Informações pessoais</h2>
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             {fields.map(({ label, name, type, className = '' }) => (
-              <label key={name} className={className}><span className="mb-2 block text-sm font-semibold text-[#58717a]">{label}</span><input type={type} disabled={!editing} value={profile[name]} onChange={(event) => setProfile((current) => ({ ...current, [name]: event.target.value }))} className="min-h-12 w-full rounded-xl border border-line bg-fog px-4 text-sm text-ink outline-none transition-all placeholder:text-[#91a5ab] enabled:bg-white enabled:focus:border-teal enabled:focus:ring-4 enabled:focus:ring-[#dff5f1] disabled:cursor-default" /></label>
+              <label key={name} className={className}><span className="mb-2 block text-sm font-semibold text-[#58717a]">{label}</span><input type={type} disabled={!editing} value={draft[name] ?? ''} onChange={(event) => setDraft((current) => ({ ...current, [name]: event.target.value }))} className="min-h-12 w-full rounded-xl border border-line bg-fog px-4 text-sm text-ink outline-none transition-all placeholder:text-[#91a5ab] enabled:bg-white enabled:focus:border-teal enabled:focus:ring-4 enabled:focus:ring-[#dff5f1] disabled:cursor-default" /></label>
             ))}
           </div>
           <div className="mt-8 border-t border-line pt-6"><p className="font-semibold text-ink">Segurança da conta</p><p className="mt-1 text-sm leading-6 text-[#66808a]">A conta utiliza autenticação para proteger o acesso às informações da consulta.</p><p className="mt-5 flex gap-2 rounded-xl bg-fog p-3 text-xs leading-5 text-[#66808a]"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-teal" aria-hidden="true" />Este ambiente não deve receber dados de saúde ou documentos reais.</p></div>
